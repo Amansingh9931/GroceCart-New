@@ -5,10 +5,10 @@ import connectDB from "./Config/db.js";
 import userRouter from "./Route/UserRoute.js";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
 //connect to database
-connectDB();
+await connectDB();
 
 
 //middleware
@@ -18,6 +18,8 @@ app.use(express.json());
 
 //routes
 app.use("/api/user",userRouter);
+
+
 
 //test route
 app.get("/", (req, res) => {

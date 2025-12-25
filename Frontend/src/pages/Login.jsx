@@ -1,149 +1,179 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FiMail, FiLock, FiUser } from "react-icons/fi";
 import axios from "axios";
-import { toast } from "react-toastify";
+import { useAuth } from "../context/AuthContext";
 
-const backend_URL = "http://localhost:8000"; // ✅ change if needed
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const [currentState, setCurrentState] = useState("Login"); // Login | Sign Up
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [showPassword, setShowPassword] = useState(false);
+  const [mode, setMode] = useState("login"); // login | signup
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
 
-  const onSubmitHandler = async (e) => {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "user", // user | deliveryBoy
+  });
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg("");
 
     try {
-      const route =
-        currentState === "Sign Up"
-          ? "/api/users/register"
-          : "/api/users/login";
+      let url = "";
+      let payload = {};
 
-      const payload =
-        currentState === "Sign Up"
-          ? { name, email, password }
-          : { email, password };
-
-      const res = await axios.post(`${backend_URL}${route}`, payload);
-
-      if (res.data?.success) {
-        const token = res.data.token;
-        localStorage.setItem("token", token); // ✅ store token
-        toast.success(res.data.message || "Success");
-        navigate("/"); // ✅ redirect after login
+      if (mode === "signup") {
+        url = `${BACKEND_URL}/api/user/signup`;
+        payload = {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          role: form.role,
+        };
       } else {
-        setErrorMsg(res.data.message || "Something went wrong");
-        toast.error(res.data.message);
+        url = `${BACKEND_URL}/api/user/signin`;
+        payload = {
+          email: form.email,
+          password: form.password,
+        };
+      }
+
+      const res = await axios.post(url, payload);
+
+      if (mode === "login" && res.data.success) {
+        const { user, token } = res.data.data;
+
+        login(user, token);
+
+        if (user.role === "user") navigate("/");
+        else if (user.role === "deliveryBoy") navigate("/delivery");
+        else navigate("/admin");
+      }
+
+      if (mode === "signup" && res.data.success) {
+        alert("Registration successful. Please login.");
+        setMode("login");
       }
     } catch (err) {
-      setErrorMsg(
-        err?.response?.data?.message ||
-          err.message ||
-          "Server error, try again"
-      );
-      toast.error("Login failed");
+      alert(err.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-black">
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-slate-900 p-8 rounded-2xl shadow-xl"
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md rounded-2xl bg-slate-900 p-8 shadow-xl"
       >
-        <h2 className="text-2xl font-semibold text-white mb-6 text-center">
-          {currentState === "Login" ? "Login" : "Create Account"}
+        <h2 className="text-2xl font-bold text-white mb-1">
+          {mode === "login" ? "Welcome back" : "Create account"}
         </h2>
+        <p className="text-slate-400 mb-6">
+          {mode === "login"
+            ? "Login to continue"
+            : "Sign up to start shopping"}
+        </p>
 
-        <form onSubmit={onSubmitHandler} className="space-y-4">
-          {currentState === "Sign Up" && (
-            <div className="relative">
-              <FiUser className="absolute left-3 top-3 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full pl-10 py-2 bg-slate-800 text-white rounded-lg outline-none"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* NAME (SIGN UP ONLY) */}
+          {mode === "signup" && (
+            <input
+              type="text"
+              name="name"
+              placeholder="Full name"
+              value={form.name}
+              onChange={handleChange}
+              required
+              className="w-full rounded-lg bg-slate-800 px-4 py-2 text-white outline-none"
+            />
           )}
 
-          <div className="relative">
-            <FiMail className="absolute left-3 top-3 text-slate-400" />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full pl-10 py-2 bg-slate-800 text-white rounded-lg outline-none"
-            />
-          </div>
+          {/* EMAIL */}
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            required
+            className="w-full rounded-lg bg-slate-800 px-4 py-2 text-white outline-none"
+          />
 
-          <div className="relative">
-            <FiLock className="absolute left-3 top-3 text-slate-400" />
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full pl-10 py-2 bg-slate-800 text-white rounded-lg outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2 text-xs text-blue-400"
+          {/* PASSWORD */}
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
+            required
+            className="w-full rounded-lg bg-slate-800 px-4 py-2 text-white outline-none"
+          />
+
+          {/* ROLE SELECT (SIGN UP ONLY) */}
+          {mode === "signup" && (
+            <select
+              name="role"
+              value={form.role}
+              onChange={handleChange}
+              className="w-full rounded-lg bg-slate-800 px-4 py-2 text-white"
             >
-              {showPassword ? "Hide" : "Show"}
-            </button>
-          </div>
+              <option value="user">Customer</option>
+              <option value="deliveryBoy">Delivery Agent</option>
+            </select>
+          )}
 
-          {errorMsg && <p className="text-red-400 text-xs">{errorMsg}</p>}
-
+          {/* BUTTON */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded-lg text-white font-semibold"
+            className="w-full rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 py-2 text-white font-semibold hover:opacity-90"
           >
             {loading
               ? "Please wait..."
-              : currentState === "Login"
+              : mode === "login"
               ? "Login"
               : "Sign Up"}
           </button>
         </form>
 
-        <p className="text-center text-xs text-slate-400 mt-6">
-          {currentState === "Login"
-            ? "Don't have an account?"
-            : "Already have an account?"}{" "}
-          <button
-            className="text-blue-400"
-            onClick={() =>
-              setCurrentState(
-                currentState === "Login" ? "Sign Up" : "Login"
-              )
-            }
-          >
-            {currentState === "Login" ? "Sign Up" : "Login"}
-          </button>
+        {/* TOGGLE */}
+        <p className="mt-4 text-center text-slate-400 text-sm">
+          {mode === "login" ? (
+            <>
+              Don&apos;t have an account?{" "}
+              <button
+                onClick={() => setMode("signup")}
+                className="text-indigo-400 hover:underline"
+              >
+                Sign Up
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <button
+                onClick={() => setMode("login")}
+                className="text-indigo-400 hover:underline"
+              >
+                Sign In
+              </button>
+            </>
+          )}
         </p>
       </motion.div>
     </div>
