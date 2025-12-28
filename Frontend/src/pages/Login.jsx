@@ -3,6 +3,9 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { GoogleLogin } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
+
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -70,6 +73,38 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+
+  /* ================= GOOGLE LOGIN ================= */
+ const handleGoogleLogin = async (credentialResponse) => {
+  try {
+    // 1️⃣ Decode Google token
+    const decoded = jwtDecode(credentialResponse.credential);
+
+    const payload = {
+      email: decoded.email,
+      name: decoded.name,
+    };
+
+    // 2️⃣ Send ONLY required data
+    const res = await axios.post(
+      "http://localhost:8000/api/user/google-signin",
+      payload
+    );
+
+    // 3️⃣ Save auth
+    localStorage.setItem("token", res.data.token);
+    localStorage.setItem("user", JSON.stringify(res.data.user));
+
+    // 4️⃣ Redirect by role
+    if (res.data.user.role === "admin") navigate("/admin");
+    else if (res.data.user.role === "deliveryBoy") navigate("/delivery");
+    else navigate("/");
+
+  } catch (error) {
+    console.error("Google Login Error:", error.response?.data || error);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-black">
@@ -150,6 +185,17 @@ const Login = () => {
               : "Sign Up"}
           </button>
         </form>
+
+
+        {/* ================= GOOGLE BUTTON ================= */}
+        {mode === "login" && (
+          <div className="mt-6 flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleLogin}
+              onError={() => alert("Google Sign In Failed")}
+            />
+          </div>
+        )}
 
         {/* TOGGLE */}
         <p className="mt-4 text-center text-slate-400 text-sm">

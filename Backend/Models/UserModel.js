@@ -9,6 +9,8 @@ const userSchema=new mongoose.Schema({
         type:String,
         required:true,
         unique: true,
+        lowercase: true,
+        trim: true,
     },
     password:{
         type:String,
@@ -22,7 +24,12 @@ const userSchema=new mongoose.Schema({
         type:String,
         enum: ["user", "admin", "deliveryBoy"],
         default:"user"
-    }
+    },
+    authProvider: {
+    type: String,
+    enum: ["manual", "google"],
+    default: "manual",
+  },
 },{timestamps:true});
 
 const UserModel=mongoose.model("user",userSchema);

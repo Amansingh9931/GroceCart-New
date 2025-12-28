@@ -1,16 +1,65 @@
 import UserModel from "../Models/UserModel.js";
 import bcrypt from "bcryptjs";
-import validator from "validator";
-import "dotenv/config";
 import jwt from "jsonwebtoken";
+import validator from "validator";
+import { OAuth2Client } from "google-auth-library";
+import "dotenv/config";
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+////////////////////////////////////////////////////////////
+// GOOGLE LOGIN
+////////////////////////////////////////////////////////////
+export const googleLogin = async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email || !name) {
+      return res.status(400).json({ message: "Email and name required" });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // ✅ Atomic operation (NO duplicates possible)
+    const user = await UserModel.findOneAndUpdate(
+      { email: normalizedEmail },
+      {
+        $setOnInsert: {
+          name,
+          email: normalizedEmail,
+          password: "google-auth",
+          authProvider: "google",
+          role: "user",
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES }
+    );
+
+    res.status(200).json({
+      success: true,
+      token,
+      user,
+    });
+  } catch (error) {
+    console.error("Google Login Error:", error);
+    res.status(500).json({ message: "Google login failed" });
+  }
+};
 
 
-// User Registration 
-const registerUser = async (req, res) => {
+////////////////////////////////////////////////////////////
+// REGISTER USER 
+////////////////////////////////////////////////////////////
+export const registerUser = async (req, res) => {
   try {
     const { name, email, password, mobile, role } = req.body;
 
-    // 1️⃣ Required fields
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -18,7 +67,6 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // 2️⃣ Validate email
     if (!validator.isEmail(email)) {
       return res.status(400).json({
         success: false,
@@ -26,7 +74,6 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // 3️⃣ Password strength
     if (
       password.length < 8 ||
       !/[A-Z]/.test(password) ||
@@ -40,23 +87,19 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // 4️⃣ Check existing user
-    const existingUser = await UserModel.findOne({ email });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existingUser = await UserModel.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: "User already exists",
+        message: "Email already registered",
       });
     }
 
-    // 5️⃣ Allowed roles (SECURE)
-    let userRole = "user"; // default customer
-
-    if (role === "deliveryBoy") {
-      userRole = "deliveryBoy";
-    }
-
-    // ❌ Prevent admin registration
+    // 🔐 ROLE CONTROL
+    let userRole = "user";
+    if (role === "deliveryBoy") userRole = "deliveryBoy";
     if (role === "admin") {
       return res.status(403).json({
         success: false,
@@ -64,50 +107,54 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // 6️⃣ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 7️⃣ Create user
-    const newUser = new UserModel({
+    const user = await UserModel.create({
       name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       mobile,
       role: userRole,
+      authProvider: "manual",
     });
 
-    await newUser.save();
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES }
+    );
 
     res.status(201).json({
       success: true,
       message: `Registered successfully as ${userRole}`,
+      token,
+      user,
     });
   } catch (error) {
     console.error("Register Error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "Registration failed",
     });
   }
 };
 
+////////////////////////////////////////////////////////////
+// LOGIN USER (ADMIN + NORMAL USER)
+////////////////////////////////////////////////////////////
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-// User Login 
-const loginUser= async(req,res)=>{
-    try{
-        const{email,password}=req.body;
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
 
-        // Required fields
-        if(!email || !password){
-            return res.status(400).json({
-                success:false,
-                message:"Email and Password are required"
-            });
-        }
-
-        // ================= ADMIN LOGIN CHECK =================
-
-      if (
+    // ================= ADMIN LOGIN =================
+    if (
       email.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase() &&
       password === process.env.ADMIN_PASSWORD
     ) {
@@ -132,97 +179,56 @@ const loginUser= async(req,res)=>{
     }
 
     // ================= NORMAL USER LOGIN =================
-        //check user existence
-        const user=await UserModel.findOne({email});
-        if(!user){
-            return res.status(404).json({
-                success:false,
-                message:"User not found"
-            });
-        }
+    const normalizedEmail = email.toLowerCase().trim();
 
-        //password verify
-        const isMatch=await bcrypt.compare(password,user.password);
-        if(!isMatch){
-            return res.status(401).json({
-                success:false,
-                message:"Invalid credentials"
-            });
-        }
+    const user = await UserModel.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
-        // ✅ CREATE JWT TOKEN
+    if (user.authProvider === "google") {
+      return res.status(400).json({
+        success: false,
+        message: "Please login using Google",
+      });
+    }
+
+    // ✅ bcrypt compare (NO comparePassword bug)
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
     const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-      },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES }
     );
 
-        //Sucessful Login (send user and token)
-        res.status(200).json({
-            success: true,
-            message: "Login successful",
-            data: {
-                user: {
-                    _id: user._id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role,
-                },
-            token,
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
         },
+        token,
+      },
     });
-    }catch(err){
-        console.log("Login Error : ",err);
-        res.status(500).json({
-            success:false,
-            message:"Internal server error"
-        });
-    }
-}
-
-// Admin Login 
-// const adminLogin = async (req, res) => {
-//   try {
-//     const { email, password } = req.body;
-
-//     if (
-//       email === process.env.ADMIN_EMAIL &&
-//       password === process.env.ADMIN_PASSWORD
-//     ) {
-//       const token = jwt.sign(
-//         { role: "admin" },
-//         process.env.JWT_SECRET,
-//         { expiresIn: process.env.JWT_EXPIRES }
-//       );
-
-//       return res.status(200).json({
-//         success: true,
-//         message: "Admin login successful",
-//         data: {
-//           user: {
-//             name: "Admin",
-//             email,
-//             role: "admin",
-//           },
-//           token,
-//         },
-//       });
-//     }
-
-//     res.status(401).json({
-//       success: false,
-//       message: "Invalid admin credentials",
-//     });
-//   } catch (err) {
-//     console.error("Admin Login Error:", err);
-//     res.status(500).json({
-//       success: false,
-//       message: "Internal server error",
-//     });
-//   }
-// };
-
-export { registerUser, loginUser };
+  } catch (error) {
+    console.error("Login Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Login failed",
+    });
+  }
+};
