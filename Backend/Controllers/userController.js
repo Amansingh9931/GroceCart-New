@@ -232,3 +232,28 @@ export const loginUser = async (req, res) => {
     });
   }
 };
+
+
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // from JWT
+    const { name, mobile } = req.body;
+
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      userId,
+      { name, mobile },
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json({
+      success: true,
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Update Profile Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Profile update failed",
+    });
+  }
+};

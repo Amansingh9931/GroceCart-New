@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../Context/AuthContext.jsx";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -13,34 +13,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-100">
-      {/* NAVBAR */}
-      <nav className="flex items-center justify-between px-8 py-6">
-        <h1 className="text-2xl font-bold text-green-600">🛒 GroceCart</h1>
-
-        <div className="flex items-center gap-4">
-          {user ? (
-            <>
-              <span className="text-sm text-gray-600">
-                Hi, <b>{user.name}</b>
-              </span>
-
-              <button
-                onClick={handleLogout}
-                className="rounded-lg bg-red-500 px-5 py-2 text-white hover:bg-red-600"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => navigate("/signin")}
-              className="rounded-lg bg-green-600 px-5 py-2 text-white hover:bg-green-700"
-            >
-              Login
-            </button>
-          )}
-        </div>
-      </nav>
 
       {/* HERO SECTION */}
       <motion.div

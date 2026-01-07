@@ -1,21 +1,27 @@
 import jwt from "jsonwebtoken";
 
-const authUser=(req,res,next)=>{
-    try{
-        const token=req.header("Authorization").replace("Bearer ","");
-        if(!token){
-            return res.status(401).json({success:false,message:"No token, authorization denied"});
-        }
+const authUser = (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-        const decoded =jwt.verify(token,process.env.JWT_SECRET);
-        req.user= decoded.user;
-        next();
-    }catch(err){
-        console.log("JWT ERROR:", err.message);
-    return res
-      .status(401)
-      .json({ success: false, message: "Session expired or invalid token" });
-    }
-}
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // 🔥 STANDARDIZE HERE
+    req.user = {
+      id: decoded.id,
+      role: decoded.role,
+    };
+
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
 
 export default authUser;

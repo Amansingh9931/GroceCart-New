@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../Context/AuthContext.jsx";
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 
@@ -58,7 +58,7 @@ const Login = () => {
 
         login(user, token);
 
-        if (user.role === "user") navigate("/");
+        if (user.role === "user") navigate("/user");
         else if (user.role === "deliveryBoy") navigate("/delivery");
         else navigate("/admin");
       }
@@ -99,7 +99,7 @@ const Login = () => {
     // 4️⃣ Redirect by role
     if (res.data.user.role === "admin") navigate("/admin");
     else if (res.data.user.role === "deliveryBoy") navigate("/delivery");
-    else navigate("/");
+    else navigate("/user");
 
   } catch (error) {
     console.error("Google Login Error:", error.response?.data || error);

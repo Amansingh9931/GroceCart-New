@@ -1,4 +1,4 @@
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../Context/AuthContext.jsx";
 
 export default function AdminDash() {
   const { user, logout } = useAuth();
