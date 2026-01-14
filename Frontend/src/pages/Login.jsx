@@ -1,17 +1,27 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../Context/AuthContext.jsx";
 import { GoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
-
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
+  const { login, user } = useAuth();
+
+  // If already logged in and no return location, redirect to appropriate dashboard
+  React.useEffect(() => {
+    if (!user) return;
+    const from = location.state?.from?.pathname;
+    if (from) return; // leave navigation to original redirect logic after login
+
+    if (user.role === "admin") navigate("/admin", { replace: true });
+    else if (user.role === "deliveryBoy") navigate("/delivery", { replace: true });
+    else navigate("/user", { replace: true });
+  }, [user, location]);
 
   const [mode, setMode] = useState("login"); // login | signup
   const [loading, setLoading] = useState(false);
@@ -20,13 +30,14 @@ const Login = () => {
     name: "",
     email: "",
     password: "",
-    role: "user", // user | deliveryBoy
+    role: "user",
   });
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  /* ================= SIMPLE LOGIN / SIGNUP ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -51,16 +62,20 @@ const Login = () => {
         };
       }
 
-      const res = await axios.post(url, payload);
+      const res = await axios.post(url, payload, {
+        headers: { "Content-Type": "application/json" },
+      });
 
       if (mode === "login" && res.data.success) {
-        const { user, token } = res.data.data;
+        const { user, token } = res.data;
 
         login(user, token);
 
-        if (user.role === "user") navigate("/user");
+        const from = location.state?.from?.pathname;
+        if (from) navigate(from, { replace: true });
+        else if (user.role === "admin") navigate("/admin");
         else if (user.role === "deliveryBoy") navigate("/delivery");
-        else navigate("/admin");
+        else navigate("/user");
       }
 
       if (mode === "signup" && res.data.success) {
@@ -68,43 +83,36 @@ const Login = () => {
         setMode("login");
       }
     } catch (err) {
+      console.error("LOGIN ERROR:", err.response?.data || err);
       alert(err.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
-
   /* ================= GOOGLE LOGIN ================= */
- const handleGoogleLogin = async (credentialResponse) => {
-  try {
-    // 1️⃣ Decode Google token
-    const decoded = jwtDecode(credentialResponse.credential);
+  const handleGoogleLogin = async (credentialResponse) => {
+    try {
+      const res = await axios.post(
+        `${BACKEND_URL}/api/user/google-signin`,
+        { credential: credentialResponse.credential },
+        { headers: { "Content-Type": "application/json" } }
+      );
 
-    const payload = {
-      email: decoded.email,
-      name: decoded.name,
-    };
+      const { user, token } = res.data;
 
-    // 2️⃣ Send ONLY required data
-    const res = await axios.post(
-      "http://localhost:8000/api/user/google-signin",
-      payload
-    );
+      login(user, token);
 
-    // 3️⃣ Save auth
-    localStorage.setItem("token", res.data.token);
-    localStorage.setItem("user", JSON.stringify(res.data.user));
-
-    // 4️⃣ Redirect by role
-    if (res.data.user.role === "admin") navigate("/admin");
-    else if (res.data.user.role === "deliveryBoy") navigate("/delivery");
-    else navigate("/user");
-
-  } catch (error) {
-    console.error("Google Login Error:", error.response?.data || error);
-  }
-};
+      const from = location.state?.from?.pathname;
+      if (from) navigate(from, { replace: true });
+      else if (user.role === "admin") navigate("/admin");
+      else if (user.role === "deliveryBoy") navigate("/delivery");
+      else navigate("/user");
+    } catch (error) {
+      console.error("Google Login Error:", error.response?.data || error);
+      alert(error.response?.data?.message || "Google login failed");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-black">
@@ -124,7 +132,6 @@ const Login = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* NAME (SIGN UP ONLY) */}
           {mode === "signup" && (
             <input
               type="text"
@@ -137,7 +144,6 @@ const Login = () => {
             />
           )}
 
-          {/* EMAIL */}
           <input
             type="email"
             name="email"
@@ -148,7 +154,6 @@ const Login = () => {
             className="w-full rounded-lg bg-slate-800 px-4 py-2 text-white outline-none"
           />
 
-          {/* PASSWORD */}
           <input
             type="password"
             name="password"
@@ -159,7 +164,6 @@ const Login = () => {
             className="w-full rounded-lg bg-slate-800 px-4 py-2 text-white outline-none"
           />
 
-          {/* ROLE SELECT (SIGN UP ONLY) */}
           {mode === "signup" && (
             <select
               name="role"
@@ -172,7 +176,6 @@ const Login = () => {
             </select>
           )}
 
-          {/* BUTTON */}
           <button
             type="submit"
             disabled={loading}
@@ -186,8 +189,6 @@ const Login = () => {
           </button>
         </form>
 
-
-        {/* ================= GOOGLE BUTTON ================= */}
         {mode === "login" && (
           <div className="mt-6 flex justify-center">
             <GoogleLogin
@@ -197,7 +198,6 @@ const Login = () => {
           </div>
         )}
 
-        {/* TOGGLE */}
         <p className="mt-4 text-center text-slate-400 text-sm">
           {mode === "login" ? (
             <>

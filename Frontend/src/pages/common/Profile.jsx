@@ -1,15 +1,18 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../Context/AuthContext.jsx";
 import { FaEdit, FaSave } from "react-icons/fa";
 import axios from "axios";
 
 const Profile = () => {
   const { user, token, login } = useAuth();
+  const navigate = useNavigate();
 
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({
     name: user.name || "",
     mobile: user.mobile || "",
+    address: user.address || "",
   });
 
   const handleChange = (e) => {
@@ -42,6 +45,12 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center pt-10">
       <div className="bg-white w-full max-w-xl rounded-xl shadow p-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-4 text-sm text-gray-600 hover:underline"
+        >
+          ← Back
+        </button>
         <h2 className="text-2xl font-bold mb-6">My Profile</h2>
 
         {/* NAME */}
@@ -82,25 +91,21 @@ const Profile = () => {
           />
         </div>
 
-        {/* ROLE (READ ONLY) */}
+        {/* ADDRESS */}
         <div className="mb-4">
-          <label className="text-gray-600 text-sm">Role</label>
+          <label className="text-gray-600 text-sm">Address</label>
           <input
-            value={user.role}
-            disabled
-            className="w-full mt-1 px-3 py-2 border rounded bg-gray-100 capitalize"
+            name="address"
+            value={form.address}
+            onChange={handleChange}
+            disabled={!editMode}
+            className={`w-full mt-1 px-3 py-2 border rounded ${
+              editMode ? "bg-white" : "bg-gray-100"
+            }`}
           />
         </div>
 
-        {/* AUTH PROVIDER (READ ONLY) */}
-        <div className="mb-6">
-          <label className="text-gray-600 text-sm">Login Method</label>
-          <input
-            value={user.authProvider}
-            disabled
-            className="w-full mt-1 px-3 py-2 border rounded bg-gray-100 capitalize"
-          />
-        </div>
+        
 
         {/* ACTION BUTTON */}
         {editMode ? (

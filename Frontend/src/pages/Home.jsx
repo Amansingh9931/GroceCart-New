@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext.jsx";
@@ -6,10 +7,62 @@ export default function Home() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const computeCount = () => {
+      try {
+        const stored =
+          localStorage.getItem("cartItems") || localStorage.getItem("cart") || "{}";
+        const parsed = JSON.parse(stored);
+
+        let count = 0;
+
+        if (Array.isArray(parsed)) {
+          // array of items
+          count = parsed.reduce((s, it) => s + (it.quantity || 1), 0);
+        } else if (parsed && typeof parsed === "object") {
+          // object mapping productId -> size -> qty (shape used in Cart.jsx)
+          for (const pid in parsed) {
+            const sizes = parsed[pid];
+            if (!sizes) continue;
+            for (const sz in sizes) {
+              count += Number(sizes[sz] || 0);
+            }
+          }
+        }
+
+        setCartCount(count);
+      } catch (e) {
+        setCartCount(0);
+      }
+    };
+
+    computeCount();
+    window.addEventListener("storage", computeCount);
+    return () => window.removeEventListener("storage", computeCount);
+  }, []);
+
   const handleLogout = () => {
     logout();
     navigate("/");
   };
+
+  // Redirect logged-in users to their dashboard
+  if (user) {
+    if (user.role === "admin") {
+      navigate("/admin", { replace: true });
+      return null;
+    }
+    if (user.role === "deliveryBoy") {
+      navigate("/delivery", { replace: true });
+      return null;
+    }
+    if (user.role === "user") {
+      navigate("/user", { replace: true });
+      return null;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-100">

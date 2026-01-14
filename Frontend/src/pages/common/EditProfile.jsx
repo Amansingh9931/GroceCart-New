@@ -1,12 +1,15 @@
 import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "../../Context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function EditProfile() {
   const { user, token, login } = useAuth();
+  const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name || "");
   const [mobile, setMobile] = useState(user?.mobile || "");
+  const [address, setAddress] = useState(user?.address || "");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -16,7 +19,7 @@ export default function EditProfile() {
     try {
       const res = await axios.put(
         "http://localhost:8000/api/user/profile",
-        { name, mobile },
+        { name, mobile, address },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -38,6 +41,13 @@ export default function EditProfile() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white rounded shadow p-6 w-full max-w-md">
+        // back button
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-4 text-sm text-gray-600 hover:underline"
+        >
+          ← Back
+        </button>
         <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -64,6 +74,17 @@ export default function EditProfile() {
             />
           </div>
 
+          {/* ADDRESS */}
+          <div>
+            <label className="block text-sm font-medium">Address</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="w-full border px-3 py-2 rounded mt-1"
+            />
+          </div>
+
           {/* EMAIL (READ ONLY) */}
           <div>
             <label className="block text-sm font-medium">Email</label>
@@ -75,16 +96,7 @@ export default function EditProfile() {
             />
           </div>
 
-          {/* ROLE (READ ONLY) */}
-          <div>
-            <label className="block text-sm font-medium">Role</label>
-            <input
-              type="text"
-              value={user.role}
-              disabled
-              className="w-full border px-3 py-2 rounded mt-1 bg-gray-100 cursor-not-allowed"
-            />
-          </div>
+          
 
           <button
             type="submit"

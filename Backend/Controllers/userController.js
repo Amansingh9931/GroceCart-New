@@ -7,20 +7,23 @@ import "dotenv/config";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-////////////////////////////////////////////////////////////
 // GOOGLE LOGIN
-////////////////////////////////////////////////////////////
 export const googleLogin = async (req, res) => {
   try {
-    const { email, name } = req.body;
+    const { credential } = req.body;
 
-    if (!email || !name) {
-      return res.status(400).json({ message: "Email and name required" });
+    if (!credential) {
+      return res.status(400).json({ message: "Google token missing" });
     }
 
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const { email, name } = ticket.getPayload();
     const normalizedEmail = email.toLowerCase().trim();
 
-    // ✅ Atomic operation (NO duplicates possible)
     const user = await UserModel.findOneAndUpdate(
       { email: normalizedEmail },
       {
@@ -30,10 +33,11 @@ export const googleLogin = async (req, res) => {
           password: "google-auth",
           authProvider: "google",
           role: "user",
+          address: "",
         },
       },
       { new: true, upsert: true }
-    );
+    ).select("-password");
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -52,59 +56,28 @@ export const googleLogin = async (req, res) => {
   }
 };
 
-
-////////////////////////////////////////////////////////////
-// REGISTER USER 
-////////////////////////////////////////////////////////////
+// REGISTER USER
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, mobile, role } = req.body;
+    const { name, email, password, mobile, role, address } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "All required fields must be filled",
-      });
+      return res.status(400).json({ message: "All fields required" });
     }
 
     if (!validator.isEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email format",
-      });
-    }
-
-    if (
-      password.length < 8 ||
-      !/[A-Z]/.test(password) ||
-      !/[a-z]/.test(password) ||
-      !/[0-9]/.test(password)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Password must be at least 8 characters and include uppercase, lowercase, and a number",
-      });
+      return res.status(400).json({ message: "Invalid email" });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const exists = await UserModel.findOne({ email: normalizedEmail });
 
-    const existingUser = await UserModel.findOne({ email: normalizedEmail });
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already registered",
-      });
+    if (exists) {
+      return res.status(409).json({ message: "Email already registered" });
     }
 
-    // 🔐 ROLE CONTROL
-    let userRole = "user";
-    if (role === "deliveryBoy") userRole = "deliveryBoy";
     if (role === "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Admin registration is not allowed",
-      });
+      return res.status(403).json({ message: "Admin registration blocked" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -114,7 +87,8 @@ export const registerUser = async (req, res) => {
       email: normalizedEmail,
       password: hashedPassword,
       mobile,
-      role: userRole,
+      address: address || "",
+      role: role === "deliveryBoy" ? "deliveryBoy" : "user",
       authProvider: "manual",
     });
 
@@ -126,84 +100,60 @@ export const registerUser = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `Registered successfully as ${userRole}`,
       token,
-      user,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        address: user.address,
+        role: user.role,
+      },
     });
   } catch (error) {
     console.error("Register Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Registration failed",
-    });
+    res.status(500).json({ message: "Registration failed" });
   }
 };
 
-////////////////////////////////////////////////////////////
 // LOGIN USER (ADMIN + NORMAL USER)
-////////////////////////////////////////////////////////////
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
-      });
-    }
-
-    // ================= ADMIN LOGIN =================
+    // ADMIN LOGIN
     if (
       email.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase() &&
       password === process.env.ADMIN_PASSWORD
     ) {
       const token = jwt.sign(
-        { role: "admin" },
+        { id: "admin", role: "admin" },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES }
       );
 
-      return res.status(200).json({
+      return res.json({
         success: true,
-        message: "Admin login successful",
-        data: {
-          user: {
-            name: "Admin",
-            email,
-            role: "admin",
-          },
-          token,
+        token,
+        user: {
+          name: "Admin",
+          email,
+          role: "admin",
         },
       });
     }
 
-    // ================= NORMAL USER LOGIN =================
-    const normalizedEmail = email.toLowerCase().trim();
+    const user = await UserModel.findOne({
+      email: email.toLowerCase().trim(),
+    });
 
-    const user = await UserModel.findOne({ email: normalizedEmail });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     if (user.authProvider === "google") {
-      return res.status(400).json({
-        success: false,
-        message: "Please login using Google",
-      });
+      return res.status(400).json({ message: "Login with Google" });
     }
 
-    // ✅ bcrypt compare (NO comparePassword bug)
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials",
-      });
-    }
+    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -211,49 +161,123 @@ export const loginUser = async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES }
     );
 
-    res.status(200).json({
+    res.json({
       success: true,
-      message: "Login successful",
-      data: {
-        user: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
-        token,
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        address: user.address,
+        role: user.role,
       },
     });
   } catch (error) {
     console.error("Login Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Login failed",
-    });
+    res.status(500).json({ message: "Login failed" });
   }
 };
 
-
+// UPDATE PROFILE
 export const updateProfile = async (req, res) => {
   try {
-    const userId = req.user.id; // from JWT
-    const { name, mobile } = req.body;
+    const userId = req.user.id;
+
+    const { name, mobile, address } = req.body;
 
     const updatedUser = await UserModel.findByIdAndUpdate(
       userId,
-      { name, mobile },
+      { name, mobile, address },
       { new: true }
     ).select("-password");
 
-    res.status(200).json({
+    res.json({
       success: true,
       user: updatedUser,
     });
   } catch (error) {
     console.error("Update Profile Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Profile update failed",
+    res.status(500).json({ message: "Profile update failed" });
+  }
+};
+
+// GET ALL USERS BY ROLE (for admin)
+export const getUsersByRole = async (req, res) => {
+  try {
+    const { role } = req.params;
+
+    // Validate role
+    if (!["user", "deliveryBoy"].includes(role)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid role" 
+      });
+    }
+
+    const users = await UserModel.find({ role }).select("-password").sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    console.error("Get Users By Role Error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch users" 
+    });
+  }
+};
+
+// GET SINGLE USER DETAILS (for admin)
+export const getUserDetails = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await UserModel.findById(userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
+
+    res.json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error("Get User Details Error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch user details" 
+    });
+  }
+};
+
+// GET ALL ADMIN STATS
+export const getAdminStats = async (req, res) => {
+  try {
+    const totalUsers = await UserModel.countDocuments({ role: "user" });
+    const totalDeliveryBoys = await UserModel.countDocuments({ role: "deliveryBoy" });
+    const totalAdmins = await UserModel.countDocuments({ role: "admin" });
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        totalDeliveryBoys,
+        totalAdmins,
+        totalAccounts: totalUsers + totalDeliveryBoys + totalAdmins,
+      },
+    });
+  } catch (error) {
+    console.error("Get Admin Stats Error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch stats" 
     });
   }
 };

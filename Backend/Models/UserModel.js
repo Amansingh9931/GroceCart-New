@@ -20,6 +20,13 @@ const userSchema=new mongoose.Schema({
         type:Number,
         required:false
     },
+    address: {
+        type: String,
+        required: false,
+        trim: true,
+        default: ""
+    },
+    
     role:{
         type:String,
         enum: ["user", "admin", "deliveryBoy"],
@@ -30,6 +37,10 @@ const userSchema=new mongoose.Schema({
     enum: ["manual", "google"],
     default: "manual",
   },
+  cartData: {
+      type: Object,
+      default: {}, // so new users start with empty cart
+    },
 },{timestamps:true});
 
 const UserModel=mongoose.model("user",userSchema);
