@@ -63,7 +63,7 @@ export default function ProductDetail() {
     <div className="min-h-screen bg-white px-4 sm:px-10 py-6">
       {/* BREADCRUMB */}
       <p className="text-sm text-gray-500 mb-4">
-        <Link to="/" className="hover:underline">
+        <Link to="/products" className="hover:underline">
           Home
         </Link>{" "}
         /{" "}
