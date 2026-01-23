@@ -60,13 +60,15 @@ export default function Navbar() {
 
   {/* RIGHT — CART + USER */}
   <div className="flex items-center gap-4">
-    {/* CART ICON */}
-    <Link to="/cart" className="relative">
-      <img className="w-5 min-w-5" src={assets.cart_icon} alt="cart" />
-      <p className="absolute -right-2 -bottom-2 w-4 text-center leading-4 bg-black text-white rounded-full text-[10px]">
-        {getCartCount()}
-      </p>
-    </Link>
+    {/* CART ICON - ONLY FOR USER ROLE */}
+    {user?.role === "user" && (
+      <Link to="/cart" className="relative">
+        <img className="w-5 min-w-5" src={assets.cart_icon} alt="cart" />
+        <p className="absolute -right-2 -bottom-2 w-4 text-center leading-4 bg-black text-white rounded-full text-[10px]">
+          {getCartCount()}
+        </p>
+      </Link>
+    )}
 
     {/* USER ICON / LOGIN */}
     {user ? (
