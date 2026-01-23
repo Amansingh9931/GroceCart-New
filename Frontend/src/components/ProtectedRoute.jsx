@@ -3,19 +3,41 @@ import { useAuth } from "../Context/AuthContext.jsx";
 
 export default function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
-
-  if (loading) return null; // or spinner
-
   const location = useLocation();
 
-  if (!user)
+  // Show loading state
+  if (loading) {
     return (
-      <Navigate to="/signin" replace state={{ from: location }} />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
     );
-
-  if (role && user.role !== role) {
-    return <Navigate to="/unauthorized" replace />;
   }
 
+  // Not logged in - redirect to login
+  if (!user) {
+    return (
+      <Navigate 
+        to="/signin" 
+        replace 
+        state={{ from: location }} 
+      />
+    );
+  }
+
+  // Has role requirement - check if user has the required role
+  if (role) {
+    // Allow multiple roles if passed as array
+    const allowedRoles = Array.isArray(role) ? role : [role];
+    
+    if (!allowedRoles.includes(user.role)) {
+      return <Navigate to="/unauthorized" replace />;
+    }
+  }
+
+  // All checks passed
   return children;
 }

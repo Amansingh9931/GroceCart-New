@@ -104,7 +104,7 @@ const ShopCartProvider = ({ children }) => {
   // FETCH PRODUCT DATA
   const getProductData = async () => {
     try {
-      const res = await axios.get(`${backend_URL}/api/product/list`);
+      const res = await axios.get(`${backend_URL}/api/products/list`);
       if (res.data?.success) {
         setProducts(res.data.products);
       } else {

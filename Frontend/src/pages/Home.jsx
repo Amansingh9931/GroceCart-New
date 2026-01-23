@@ -1,13 +1,22 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext.jsx";
+import { ShopContext } from "../Context/ShopContext.jsx";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { ShoppingCart, Heart } from "lucide-react";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
+  const { addToCart, backend_URL, currency } = useContext(ShopContext);
+  const redirected = useRef(false);
 
   const [cartCount, setCartCount] = useState(0);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSizes, setSelectedSizes] = useState({});
 
   useEffect(() => {
     const computeCount = () => {
@@ -43,36 +52,57 @@ export default function Home() {
     return () => window.removeEventListener("storage", computeCount);
   }, []);
 
+  // FETCH PRODUCTS
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get(`${backend_URL}/api/products/list`);
+        if (res.data?.success) {
+          setProducts(res.data.products || []);
+        } else {
+          toast.error("Failed to load products");
+        }
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        toast.error("Error loading products");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [backend_URL]);
+
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
-  // Redirect logged-in users to their dashboard
-  if (user) {
-    if (user.role === "admin") {
-      navigate("/admin", { replace: true });
-      return null;
+  // Redirect logged-in users to their dashboard (ONLY ONCE)
+  useEffect(() => {
+    if (authLoading) return; // Wait for auth to load
+    
+    if (user && !redirected.current) {
+      redirected.current = true;
+      
+      if (user.role === "admin") {
+        navigate("/admin", { replace: true });
+      } else if (user.role === "deliveryBoy") {
+        navigate("/delivery", { replace: true });
+      } else if (user.role === "user") {
+        navigate("/user", { replace: true });
+      }
     }
-    if (user.role === "deliveryBoy") {
-      navigate("/delivery", { replace: true });
-      return null;
-    }
-    if (user.role === "user") {
-      navigate("/user", { replace: true });
-      return null;
-    }
-  }
+  }, [user, authLoading, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-100">
-
+    <div className="min-h-screen bg-white">
       {/* HERO SECTION */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="mx-auto mt-16 max-w-4xl text-center"
+        className="mx-auto mt-16 max-w-4xl text-center px-4"
       >
         <h2 className="text-4xl font-extrabold text-gray-800 md:text-5xl">
           Fresh Groceries,{" "}
@@ -85,14 +115,17 @@ export default function Home() {
         </p>
 
         <div className="mt-8 flex justify-center gap-4">
-          <button className="rounded-xl bg-green-600 px-8 py-3 text-white shadow-lg hover:bg-green-700">
+          <button
+            onClick={() => navigate("/products")}
+            className="rounded-xl bg-green-600 px-8 py-3 text-white shadow-lg hover:bg-green-700 transition"
+          >
             Shop Now
           </button>
 
           {!user && (
             <button
               onClick={() => navigate("/signin")}
-              className="rounded-xl border-2 border-green-600 px-8 py-3 text-green-600 hover:bg-green-50"
+              className="rounded-xl border-2 border-green-600 px-8 py-3 text-green-600 hover:bg-green-50 transition"
             >
               Get Started
             </button>
@@ -101,7 +134,7 @@ export default function Home() {
       </motion.div>
 
       {/* FEATURES */}
-      <div className="mx-auto mt-20 grid max-w-6xl grid-cols-1 gap-6 px-6 md:grid-cols-4">
+      <div className="mx-auto mt-20 grid max-w-6xl grid-cols-1 gap-6 px-6 md:grid-cols-4 mb-16">
         {[
           { icon: "🥦", title: "Fresh Products" },
           { icon: "🚚", title: "Fast Delivery" },
@@ -123,8 +156,119 @@ export default function Home() {
         ))}
       </div>
 
+      {/* BLINKIT-LIKE PRODUCTS SECTION */}
+      <div className="bg-gray-50 py-8">
+        <div className="mx-auto max-w-7xl px-4 md:px-8">
+          <div className="mb-8">
+            <h3 className="text-2xl font-bold text-gray-800">
+              🛒 Popular Products
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">Get fresh items delivered to your door</p>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">No products available</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+              {products.map((product) => (
+                <motion.div
+                  key={product._id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all group"
+                >
+                  {/* IMAGE CONTAINER */}
+                  <div
+                    onClick={() => navigate(`/products/${product._id}`)}
+                    className="relative h-32 md:h-40 bg-gray-100 rounded-t-xl overflow-hidden cursor-pointer group"
+                  >
+                    <img
+                      src={product.imageUrl?.[0]}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-md opacity-0 group-hover:opacity-100 transition">
+                      <Heart size={16} className="text-red-500" />
+                    </div>
+                  </div>
+
+                  {/* PRODUCT INFO */}
+                  <div className="p-3 md:p-4">
+                    <h4
+                      onClick={() => navigate(`/products/${product._id}`)}
+                      className="font-semibold text-gray-800 text-sm truncate cursor-pointer hover:text-green-600"
+                    >
+                      {product.name}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {product.category || "Grocery"}
+                    </p>
+
+                    {/* SIZE SELECTOR */}
+                    {product.sizes && product.sizes.length > 0 && (
+                      <div className="mt-2 flex gap-1 flex-wrap">
+                        {product.sizes.map((size) => (
+                          <button
+                            key={size}
+                            onClick={() => setSelectedSizes({ ...selectedSizes, [product._id]: size })}
+                            className={`text-xs px-2 py-1 rounded border transition ${
+                              selectedSizes[product._id] === size
+                                ? "bg-green-500 text-white border-green-500"
+                                : "border-gray-300 text-gray-600 hover:border-green-500"
+                            }`}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* PRICE & CART */}
+                    <div className="flex items-center justify-between mt-3">
+                      <div>
+                        <p className="font-bold text-gray-900">
+                          {currency}
+                          {product.price}
+                        </p>
+                        {product.originalPrice && (
+                          <p className="text-xs text-gray-400 line-through">
+                            {currency}
+                            {product.originalPrice}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          const size = selectedSizes[product._id] || product.sizes?.[0];
+                          if (size) {
+                            addToCart(product._id, size);
+                            toast.success("Added to cart!");
+                          } else {
+                            toast.error("Please select a size");
+                          }
+                        }}
+                        className="bg-green-500 hover:bg-green-600 text-white rounded-lg p-2 transition"
+                      >
+                        <ShoppingCart size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* FOOTER */}
-      <footer className="mt-24 bg-green-600 py-6 text-center text-white">
+      <footer className="mt-12 bg-green-600 py-6 text-center text-white">
         © {new Date().getFullYear()} GroceCart. All rights reserved.
       </footer>
     </div>

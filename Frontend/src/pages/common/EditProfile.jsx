@@ -1,11 +1,14 @@
 import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "../../Context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "react-toastify";
 
 export default function EditProfile() {
   const { user, token, login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectPath = searchParams.get("redirect") || "/profile";
 
   const [name, setName] = useState(user?.name || "");
   const [mobile, setMobile] = useState(user?.mobile || "");
@@ -29,10 +32,13 @@ export default function EditProfile() {
 
       // 🔥 Update AuthContext with new user data
       login(res.data.user, token);
-      alert("Profile updated successfully");
+      toast.success("Profile updated successfully");
+      
+      // Redirect to the path specified in query params or back to profile
+      navigate(redirectPath);
     } catch (err) {
       console.error(err);
-      alert("Failed to update profile");
+      toast.error("Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -41,7 +47,6 @@ export default function EditProfile() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white rounded shadow p-6 w-full max-w-md">
-        // back button
         <button
           onClick={() => navigate(-1)}
           className="mb-4 text-sm text-gray-600 hover:underline"

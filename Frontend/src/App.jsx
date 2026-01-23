@@ -19,6 +19,10 @@ import EditProfile from "./pages/common/EditProfile.jsx";
 import Navbar from "./pages/common/Navbar.jsx";
 import Cart from "./pages/common/Cart.jsx";
 import Products from "./pages/user/Products.jsx";
+import ProductDetails from "./pages/user/ProductDetails.jsx";
+import Orders from "./pages/user/Orders.jsx";
+import AdminOrders from "./pages/admin/Orders.jsx";
+import PlaceOrder from "./pages/user/placeOrder.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Unauthorized from "./pages/Unauthorized.jsx";
 
@@ -32,7 +36,23 @@ function App() {
         <Route path="/signin" element={<Login />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/products" element={<Products />} />
-
+        <Route path="/products/:id" element={<ProductDetails />} />
+        <Route
+          path="/place-order"
+          element={
+            <ProtectedRoute role="user">
+              <PlaceOrder />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute role="user">
+              <Orders />
+            </ProtectedRoute>
+          }
+        />
         {/* PROFILE */}
         <Route
           path="/profile"
@@ -69,6 +89,7 @@ function App() {
           <Route path="user/:userId" element={<UserDetails />} />
           <Route path="delivery-agents" element={<AdminDeliveryAgents />} />
           <Route path="agent/:agentId" element={<AgentDetails />} />
+          <Route path="orders" element={<AdminOrders />} />
         </Route>
 
         {/* USER */}

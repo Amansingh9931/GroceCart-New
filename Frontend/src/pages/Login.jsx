@@ -25,6 +25,8 @@ const Login = () => {
 
   const [mode, setMode] = useState("login"); // login | signup
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showBannedAlert, setShowBannedAlert] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -35,12 +37,14 @@ const Login = () => {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setErrorMessage(""); // Clear error when user types
   };
 
   /* ================= SIMPLE LOGIN / SIGNUP ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage("");
 
     try {
       let url = "";
@@ -79,12 +83,24 @@ const Login = () => {
       }
 
       if (mode === "signup" && res.data.success) {
-        alert("Registration successful. Please login.");
+        setErrorMessage("✓ Registration successful. Please login.");
         setMode("login");
+        setForm({ name: "", email: "", password: "", role: "user" });
       }
     } catch (err) {
+      const errMsg = err.response?.data?.message || "Something went wrong";
+      const status = err.response?.data?.status;
+
+      if (status === "banned") {
+        setShowBannedAlert(true);
+        setErrorMessage("🚫 Your account has been banned. You cannot login.");
+      } else if (status === "inactive") {
+        setErrorMessage("⚠️ Your account is inactive. Please contact support.");
+      } else {
+        setErrorMessage(errMsg);
+      }
+
       console.error("LOGIN ERROR:", err.response?.data || err);
-      alert(err.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -115,7 +131,37 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-black">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-black p-4">
+      {/* Banned Alert Modal */}
+      {showBannedAlert && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-8 max-w-md text-center shadow-2xl"
+          >
+            <div className="mb-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                <span className="text-3xl">🚫</span>
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-red-600 mb-2">Account Banned</h2>
+            <p className="text-gray-600 mb-6">
+              Your account has been banned due to policy violations. You cannot login at this time.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              If you believe this is a mistake, please contact our support team.
+            </p>
+            <button
+              onClick={() => setShowBannedAlert(false)}
+              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition font-semibold"
+            >
+              Close
+            </button>
+          </motion.div>
+        </div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -130,6 +176,26 @@ const Login = () => {
             ? "Login to continue"
             : "Sign up to start shopping"}
         </p>
+
+        {/* Error Message Display */}
+        {errorMessage && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className={`mb-4 p-4 rounded-lg text-sm font-medium ${
+              errorMessage.includes("✓") 
+                ? "bg-green-500 bg-opacity-20 border border-green-500 text-green-300"
+                : errorMessage.includes("🚫")
+                ? "bg-red-500 bg-opacity-20 border border-red-500 text-red-300"
+                : errorMessage.includes("⚠️")
+                ? "bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-300"
+                : "bg-red-500 bg-opacity-20 border border-red-500 text-red-300"
+            }`}
+          >
+            {errorMessage}
+          </motion.div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "signup" && (

@@ -5,6 +5,11 @@ const addToCart = async (req, res) => {
     const { itemId, size } = req.body;
     const userId = req.user.id;
 
+    // Skip cart for admin users
+    if (userId === "admin") {
+      return res.json({ success: true, message: "Added to cart" });
+    }
+
     const userData = await userModel.findById(userId);
     if (!userData) {
       return res
@@ -30,6 +35,11 @@ const updateCart = async (req, res) => {
     const { itemId, size, quantity } = req.body;
     const userId = req.user.id;
 
+    // Skip cart for admin users
+    if (userId === "admin") {
+      return res.json({ success: true, cartData: {}, message: "Updated cart" });
+    }
+
     const userData = await userModel.findById(userId);
     if (!userData) {
       return res
@@ -53,6 +63,11 @@ const getUserCart = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Skip cart for admin users
+    if (userId === "admin") {
+      return res.json({ success: true, cartData: {} });
+    }
+
     const userData = await userModel.findById(userId);
     if (!userData) {
       return res
@@ -75,6 +90,11 @@ const setCart = async (req, res) => {
 
     if (!cartData || typeof cartData !== "object") {
       return res.status(400).json({ success: false, message: "Invalid cart data" });
+    }
+
+    // Skip cart for admin users
+    if (userId === "admin") {
+      return res.json({ success: true, message: "Cart saved", cartData });
     }
 
     await userModel.findByIdAndUpdate(userId, { cartData });

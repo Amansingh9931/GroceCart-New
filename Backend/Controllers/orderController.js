@@ -1,17 +1,24 @@
 import orderModel from "../Models/OrderModel.js";
 import userModel from "../Models/UserModel.js";
+import AddressModel from "../Models/AddressModel.js";
 
 //placing order using cod method
 const placeOrder = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { items, amount, address } = req.body;
+    const { items, amount, addressId } = req.body;
+
+    // Verify address belongs to user
+    const address = await AddressModel.findOne({ _id: addressId, userId });
+    if (!address) {
+      return res.status(404).json({ success: false, message: "Address not found" });
+    }
 
     const orderData = {
       userId,
       items,
       amount,
-      address,
+      addressId,
       paymentMethod: "COD",
       payment: false,
       date: new Date(),
@@ -22,10 +29,10 @@ const placeOrder = async (req, res) => {
 
     await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
-    res.json({ success: true, message: "Order Placed" });
+    res.json({ success: true, message: "Order Placed", orderId: newOrder._id });
   } catch (err) {
     console.log(err);
-    toast.error(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -38,7 +45,7 @@ const placeOrderRazorpay = async (req, res) => {};
 // all order data for admin
 const allOrders = async (req, res) => {
   try {
-    const orders = await orderModel.find({});
+    const orders = await orderModel.find({}).populate("addressId");
     res.json({ success: true, orders });
   } catch (err) {
     console.log(err);
@@ -50,7 +57,7 @@ const allOrders = async (req, res) => {
 const userOrders = async (req, res) => {
   try {
     const userId = req.user.id;
-    const orders = await orderModel.find({ userId });
+    const orders = await orderModel.find({ userId }).populate("addressId");
 
     res.json({ success: true, orders });
   } catch (err) {

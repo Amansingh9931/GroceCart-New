@@ -70,10 +70,19 @@ export const registerUser = async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const exists = await UserModel.findOne({ email: normalizedEmail });
-
-    if (exists) {
+    
+    // Check for duplicate email
+    const emailExists = await UserModel.findOne({ email: normalizedEmail });
+    if (emailExists) {
       return res.status(409).json({ message: "Email already registered" });
+    }
+
+    // Check for duplicate mobile number
+    if (mobile) {
+      const mobileExists = await UserModel.findOne({ mobile });
+      if (mobileExists) {
+        return res.status(409).json({ message: "Mobile number already registered" });
+      }
     }
 
     if (role === "admin") {
@@ -90,6 +99,7 @@ export const registerUser = async (req, res) => {
       address: address || "",
       role: role === "deliveryBoy" ? "deliveryBoy" : "user",
       authProvider: "manual",
+      status: "active",
     });
 
     const token = jwt.sign(
@@ -107,6 +117,7 @@ export const registerUser = async (req, res) => {
         email: user.email,
         address: user.address,
         role: user.role,
+        status: user.status,
       },
     });
   } catch (error) {
@@ -148,6 +159,21 @@ export const loginUser = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Check user status
+    if (user.status === "inactive") {
+      return res.status(403).json({ 
+        message: "Your account is inactive. Please contact support.",
+        status: "inactive"
+      });
+    }
+
+    if (user.status === "banned") {
+      return res.status(403).json({ 
+        message: "Your account has been banned. You cannot login.",
+        status: "banned"
+      });
+    }
+
     if (user.authProvider === "google") {
       return res.status(400).json({ message: "Login with Google" });
     }
@@ -170,6 +196,7 @@ export const loginUser = async (req, res) => {
         email: user.email,
         address: user.address,
         role: user.role,
+        status: user.status,
       },
     });
   } catch (error) {
@@ -256,6 +283,53 @@ export const getUserDetails = async (req, res) => {
     });
   }
 };
+
+// CHANGE USER STATUS (Admin only)
+export const changeUserStatus = async (req, res) => {
+  try {
+    const { userId, status } = req.body;
+
+    if (!userId || !status) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "User ID and status required" 
+      });
+    }
+
+    if (!["active", "inactive", "banned"].includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid status. Must be active, inactive, or banned" 
+      });
+    }
+
+    const user = await UserModel.findByIdAndUpdate(
+      userId,
+      { status },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `User status changed to ${status}`,
+      user,
+    });
+  } catch (error) {
+    console.error("Change User Status Error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to change user status" 
+    });
+  }
+};
+
 
 // GET ALL ADMIN STATS
 export const getAdminStats = async (req, res) => {
