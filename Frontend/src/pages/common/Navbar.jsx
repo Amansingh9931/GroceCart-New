@@ -47,32 +47,15 @@ export default function Navbar() {
 
   {/* CENTER — MAIN NAV LINKS */}
   <div className="flex-1 flex justify-center gap-6">
-    {user && (
-      <>
-        <Link
-          to={
-            user.role === "admin"
-              ? "/admin"
-              : user.role === "deliveryBoy"
-              ? "/delivery"
-              : "/user"
-          }
-          className="text-sm text-gray-600 hover:text-black font-medium"
-        >
-          Dashboard
-        </Link>
-
-        {menuItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className="text-sm text-gray-600 hover:text-black"
-          >
-            {item.label}
-          </Link>
-        ))}
-      </>
-    )}
+    {user && menuItems.map((item) => (
+      <Link
+        key={item.path}
+        to={item.path}
+        className="text-sm text-gray-600 hover:text-black font-medium"
+      >
+        {item.label}
+      </Link>
+    ))}
   </div>
 
   {/* RIGHT — CART + USER */}

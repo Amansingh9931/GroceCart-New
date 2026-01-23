@@ -37,7 +37,6 @@ function App() {
         <Route path="/signin" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/cart" element={<Cart />} />
-        <Route path="/products" element={<Products />} />
         <Route path="/products/:id" element={<ProductDetails />} />
         <Route
           path="/place-order"
@@ -110,7 +109,7 @@ function App() {
         <Route
           path="/delivery"
           element={
-            <ProtectedRoute role="deliveryBoy">
+            <ProtectedRoute role={["deliveryBoy", "delivery"]}>
               <LayoutDelivery />
             </ProtectedRoute>
           }

@@ -52,6 +52,12 @@ const allOrders = async (req, res) => {
     const ordersWithImages = await Promise.all(
       orders.map(async (order) => {
         const orderObj = order.toObject();
+        
+        // Include address data explicitly
+        if (order.addressId) {
+          orderObj.address = order.addressId;
+        }
+        
         orderObj.items = await Promise.all(
           orderObj.items.map(async (item) => {
             try {
@@ -86,6 +92,12 @@ const userOrders = async (req, res) => {
     const ordersWithImages = await Promise.all(
       orders.map(async (order) => {
         const orderObj = order.toObject();
+        
+        // Include address data explicitly
+        if (order.addressId) {
+          orderObj.address = order.addressId;
+        }
+        
         orderObj.items = await Promise.all(
           orderObj.items.map(async (item) => {
             try {

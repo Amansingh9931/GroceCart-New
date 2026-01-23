@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../Context/AuthContext.jsx";
+import { useContext } from "react";
+import { ShopContext } from "../../Context/ShopContext.jsx";
+import { assets } from "../../assets/frontend_assets/assets.js";
 import {
   FaShoppingCart,
-  FaBoxOpen,
   FaHeart,
   FaUserCircle,
   FaListAlt,
@@ -11,6 +13,14 @@ import {
 const UserDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const {
+    products,
+    currency,
+    addToCart,
+    updateQuantity,
+    cartItems,
+  } = useContext(ShopContext);
+  const size = "standard";
 
   const stats = {
     orders: 5,
@@ -28,81 +38,99 @@ const UserDashboard = () => {
       {/* WELCOME */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold">
-          Welcome back, {user.name} 👋
+          Welcome back, {user.name}
         </h1>
         <p className="text-gray-500">
           Here’s what’s happening with your account
         </p>
       </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <StatCard
-          title="Total Orders"
-          value={stats.orders}
-          icon={<FaListAlt />}
-          color="bg-indigo-600"
-        />
-        <StatCard
-          title="Cart Items"
-          value={stats.cart}
-          icon={<FaShoppingCart />}
-          color="bg-green-600"
-        />
-        <StatCard
-          title="Wishlist"
-          value={stats.wishlist}
-          icon={<FaHeart />}
-          color="bg-pink-600"
-        />
-      </div>
-
-      {/* QUICK ACTIONS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <ActionCard
-          title="Browse Products"
-          icon={<FaBoxOpen />}
-          onClick={() => navigate("/products")}
-        />
-        <ActionCard
-          title="My Orders"
-          icon={<FaListAlt />}
-          onClick={() => navigate("/orders")}
-        />
-        <ActionCard
-          title="Cart"
-          icon={<FaShoppingCart />}
-          onClick={() => navigate("/cart")}
-        />
-        <ActionCard
-          title="Profile"
-          icon={<FaUserCircle />}
-          onClick={() => navigate("/profile")}
-        />
-      </div>
-
-      {/* RECENT ORDERS */}
-      <div className="bg-white rounded-xl shadow p-5">
-        <h2 className="text-lg font-semibold mb-4">Recent Orders</h2>
-
-        {recentOrders.length === 0 ? (
-          <p className="text-gray-500">No recent orders</p>
+      {/* PRODUCTS */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Shop Products</h2>
+        {products.length === 0 ? (
+          <p className="text-gray-500">No products available.</p>
         ) : (
-          <div className="space-y-3">
-            {recentOrders.map((order) => (
-              <div
-                key={order.id}
-                className="flex justify-between items-center border p-3 rounded-lg"
-              >
-                <div>
-                  <p className="font-semibold">Order ID: {order.id}</p>
-                  <p className="text-sm text-gray-500">
-                    Status: {order.status}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {products.map((p) => {
+              const qty = cartItems?.[p._id]?.[size] || 0;
+
+              return (
+                <div
+                  key={p._id}
+                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all p-3 flex flex-col"
+                >
+                  {/* IMAGE */}
+                  <div
+                    onClick={() => navigate(`/products/${p._id}`)}
+                    className="cursor-pointer flex justify-center"
+                  >
+                    <img
+                      src={p.imageUrl?.[0] || assets.placeholder}
+                      alt={p.name}
+                      className="h-28 w-full object-contain transition-transform hover:scale-105"
+                    />
+                  </div>
+
+                  {/* DELIVERY */}
+                  <p onClick={() => navigate(`/products/${p._id}`)} className="text-[11px] text-gray-500 mt-2">
+                    ⏱ 9 mins
                   </p>
+
+                  {/* NAME */}
+                  <h3 onClick={() => navigate(`/products/${p._id}`)} className="text-sm font-medium mt-1 line-clamp-2">
+                    {p.name}
+                  </h3>
+
+                  {/* SIZE */}
+                  <p onClick={() => navigate(`/products/${p._id}`)} className="text-xs text-gray-500 mt-1">
+                    500 ml
+                  </p>
+
+                  {/* PRICE + CART CONTROL */}
+                  <div className="mt-auto pt-3 flex items-center justify-between">
+                    <span onClick={() => navigate(`/products/${p._id}`)} className="text-sm font-semibold">
+                      {currency}
+                      {p.price}
+                    </span>
+
+                    {/* ADD / QUANTITY */}
+                    {qty === 0 ? (
+                      <button
+                        onClick={() => addToCart(p._id, size)}
+                        className="border border-green-600 text-green-600 text-xs font-semibold px-4 py-1 rounded-md hover:bg-green-50 active:scale-95 transition"
+                      >
+                        ADD
+                      </button>
+                    ) : (
+                      <div className="flex items-center border border-green-600 rounded-md overflow-hidden">
+                        <button
+                          onClick={() =>
+                            updateQuantity(p._id, size, qty - 1)
+                          }
+                          className="px-3 py-1 text-green-600 font-bold hover:bg-green-50 active:scale-95 transition"
+                        >
+                          −
+                        </button>
+
+                        <span className="px-3 text-sm font-semibold transition-transform duration-150 scale-105">
+                          {qty}
+                        </span>
+
+                        <button
+                          onClick={() =>
+                            updateQuantity(p._id, size, qty + 1)
+                          }
+                          className="px-3 py-1 text-green-600 font-bold hover:bg-green-50 active:scale-95 transition"
+                        >
+                          +
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="font-semibold">₹{order.amount}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

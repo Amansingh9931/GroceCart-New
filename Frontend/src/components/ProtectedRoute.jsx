@@ -33,7 +33,12 @@ export default function ProtectedRoute({ children, role }) {
     // Allow multiple roles if passed as array
     const allowedRoles = Array.isArray(role) ? role : [role];
     
-    if (!allowedRoles.includes(user.role)) {
+    // Normalize roles for comparison (handle deliveryBoy vs delivery)
+    const userRole = user.role?.toLowerCase();
+    const normalizedAllowedRoles = allowedRoles.map(r => r.toLowerCase());
+    
+    if (!normalizedAllowedRoles.includes(userRole)) {
+      console.log("Access Denied: User role", user.role, "not in allowed:", allowedRoles);
       return <Navigate to="/unauthorized" replace />;
     }
   }

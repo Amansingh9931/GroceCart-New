@@ -1,12 +1,11 @@
 export const navbarConfig = {
   user: [
-    // { label: "Dashboard", path: "/user" },
-    { label: "Products", path: "/products" },
+    { label: "Dashboard", path: "/user" },
     { label: "Orders", path: "/orders" },
   ],
 
   admin: [
-    // { label: "Dashboard", path: "/admin" },
+    { label: "Dashboard", path: "/admin" },
     { label: "Users", path: "/admin/users" },
     { label: "Delivery Agents", path: "/admin/delivery-agents" },
     { label: "Products", path: "/admin/products" },
@@ -14,7 +13,13 @@ export const navbarConfig = {
   ],
 
   deliveryBoy: [
-    { label: "Assigned", path: "/delivery" },
+    { label: "Dashboard", path: "/delivery" },
+    { label: "History", path: "/delivery/history" },
+    { label: "Earnings", path: "/delivery/earnings" },
+  ],
+
+  delivery: [
+    { label: "Dashboard", path: "/delivery" },
     { label: "History", path: "/delivery/history" },
     { label: "Earnings", path: "/delivery/earnings" },
   ],
