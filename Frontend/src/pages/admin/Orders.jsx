@@ -276,18 +276,44 @@ export default function AdminOrders() {
                           <Package size={18} className="text-purple-600" />
                           <h4 className="font-bold text-gray-800">Order Items ({order.items?.length || 0})</h4>
                         </div>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                        <div className="space-y-3 max-h-48 overflow-y-auto">
                           {order.items && order.items.length > 0 ? (
                             order.items.map((item, idx) => (
                               <div
                                 key={idx}
-                                className="flex justify-between text-sm bg-gray-50 p-3 rounded border border-gray-200"
+                                className="flex gap-4 bg-gray-50 p-3 rounded border border-gray-200"
                               >
-                                <div>
-                                  <p className="font-semibold text-gray-800">{item.name}</p>
-                                  <p className="text-xs text-gray-500">Qty: {item.quantity} × {item.size}</p>
+                                {/* Product Image */}
+                                <div className="w-16 h-16 flex-shrink-0 bg-gray-200 rounded overflow-hidden flex items-center justify-center">
+                                  {item.image ? (
+                                    <img
+                                      src={item.image}
+                                      alt={item.name}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.target.style.display = "none";
+                                      }}
+                                    />
+                                  ) : (
+                                    <Package className="w-6 h-6 text-white" />
+                                  )}
+                                  {item.image && (
+                                    <div className="hidden w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-300 to-gray-400">
+                                      <Package className="w-6 h-6 text-white" />
+                                    </div>
+                                  )}
                                 </div>
-                                <p className="font-bold text-gray-900">₹{(item.price * item.quantity).toFixed(2)}</p>
+
+                                {/* Item Details */}
+                                <div className="flex-1 flex flex-col justify-between">
+                                  <div>
+                                    <p className="font-semibold text-gray-800 text-sm">{item.name}</p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Qty: {item.quantity} {item.size && `(${item.size})`}
+                                    </p>
+                                  </div>
+                                  <p className="font-bold text-green-600 text-sm">₹{(item.price * item.quantity).toFixed(2)}</p>
+                                </div>
                               </div>
                             ))
                           ) : (

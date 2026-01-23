@@ -1,6 +1,7 @@
 import orderModel from "../Models/OrderModel.js";
 import userModel from "../Models/UserModel.js";
 import AddressModel from "../Models/AddressModel.js";
+import productModel from "../Models/ProductModel.js";
 
 //placing order using cod method
 const placeOrder = async (req, res) => {
@@ -46,7 +47,29 @@ const placeOrderRazorpay = async (req, res) => {};
 const allOrders = async (req, res) => {
   try {
     const orders = await orderModel.find({}).populate("addressId");
-    res.json({ success: true, orders });
+    
+    // Fetch product images for each item in orders
+    const ordersWithImages = await Promise.all(
+      orders.map(async (order) => {
+        const orderObj = order.toObject();
+        orderObj.items = await Promise.all(
+          orderObj.items.map(async (item) => {
+            try {
+              const product = await productModel.findById(item._id || item.id);
+              return {
+                ...item,
+                image: product?.imageUrl?.[0] || null,
+              };
+            } catch (err) {
+              return item;
+            }
+          })
+        );
+        return orderObj;
+      })
+    );
+
+    res.json({ success: true, orders: ordersWithImages });
   } catch (err) {
     console.log(err);
     res.json({ success: false, message: err.message });
@@ -59,7 +82,28 @@ const userOrders = async (req, res) => {
     const userId = req.user.id;
     const orders = await orderModel.find({ userId }).populate("addressId");
 
-    res.json({ success: true, orders });
+    // Fetch product images for each item in orders
+    const ordersWithImages = await Promise.all(
+      orders.map(async (order) => {
+        const orderObj = order.toObject();
+        orderObj.items = await Promise.all(
+          orderObj.items.map(async (item) => {
+            try {
+              const product = await productModel.findById(item._id || item.id);
+              return {
+                ...item,
+                image: product?.imageUrl?.[0] || null,
+              };
+            } catch (err) {
+              return item;
+            }
+          })
+        );
+        return orderObj;
+      })
+    );
+
+    res.json({ success: true, orders: ordersWithImages });
   } catch (err) {
     console.log(err);
     res.json({ success: false, message: err.message });

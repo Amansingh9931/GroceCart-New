@@ -7,7 +7,7 @@ import { GoogleLogin } from "@react-oauth/google";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-const Login = () => {
+const Login = ({ initialMode = "login" }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, user } = useAuth();
@@ -23,10 +23,20 @@ const Login = () => {
     else navigate("/user", { replace: true });
   }, [user, location]);
 
-  const [mode, setMode] = useState("login"); // login | signup
+  const [mode, setMode] = useState(initialMode); // login | signup
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showBannedAlert, setShowBannedAlert] = useState(false);
+
+  // Update URL when mode changes
+  const handleModeChange = (newMode) => {
+    setMode(newMode);
+    if (newMode === "signup") {
+      navigate("/signup");
+    } else {
+      navigate("/signin");
+    }
+  };
 
   const [form, setForm] = useState({
     name: "",
@@ -84,8 +94,13 @@ const Login = () => {
 
       if (mode === "signup" && res.data.success) {
         setErrorMessage("✓ Registration successful. Please login.");
-        setMode("login");
-        setForm({ name: "", email: "", password: "", role: "user" });
+        // Store email, password, and role for pre-filling
+        const signupEmail = form.email;
+        const signupPassword = form.password;
+        const signupRole = form.role;
+        setForm({ name: "", email: signupEmail, password: signupPassword, role: signupRole });
+        // Navigate to signin and update mode
+        handleModeChange("login");
       }
     } catch (err) {
       const errMsg = err.response?.data?.message || "Something went wrong";
@@ -269,7 +284,7 @@ const Login = () => {
             <>
               Don&apos;t have an account?{" "}
               <button
-                onClick={() => setMode("signup")}
+                onClick={() => handleModeChange("signup")}
                 className="text-indigo-400 hover:underline"
               >
                 Sign Up
@@ -279,7 +294,7 @@ const Login = () => {
             <>
               Already have an account?{" "}
               <button
-                onClick={() => setMode("login")}
+                onClick={() => handleModeChange("login")}
                 className="text-indigo-400 hover:underline"
               >
                 Sign In
