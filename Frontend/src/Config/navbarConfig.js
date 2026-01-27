@@ -15,6 +15,7 @@ export const navbarConfig = {
   deliveryBoy: [
     { label: "Dashboard", path: "/delivery" },
     { label: "Available Orders", path: "/delivery/available" },
+    { label: "Active Delivery", path: "/delivery/active-delivery" },
     { label: "History", path: "/delivery/history" },
     { label: "Earnings", path: "/delivery/earnings" },
   ],
@@ -22,6 +23,7 @@ export const navbarConfig = {
   delivery: [
     { label: "Dashboard", path: "/delivery" },
     { label: "Available Orders", path: "/delivery/available" },
+    { label: "Active Delivery", path: "/delivery/active-delivery" },
     { label: "History", path: "/delivery/history" },
     { label: "Earnings", path: "/delivery/earnings" },
   ],
