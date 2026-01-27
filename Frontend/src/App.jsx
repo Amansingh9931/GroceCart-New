@@ -14,6 +14,10 @@ import AdminDeliveryAgents from "./pages/admin/DeliveryAgents.jsx";
 import UserDetails from "./pages/admin/UserDetails.jsx";
 import AgentDetails from "./pages/admin/AgentDetails.jsx";
 import DeliveryDash from "./pages/delivery/DeliveryDash.jsx";
+import AvailableOrders from "./pages/delivery/AvailableOrders.jsx";
+import ActiveDelivery from "./pages/delivery/ActiveDelivery.jsx";
+import DeliveryHistory from "./pages/delivery/DeliveryHistory.jsx";
+import Earnings from "./pages/delivery/Earnings.jsx";
 import UserDash from "./pages/user/UserDash.jsx";
 import Profile from "./pages/common/Profile.jsx";
 import EditProfile from "./pages/common/EditProfile.jsx";
@@ -115,6 +119,10 @@ function App() {
           }
         >
           <Route index element={<DeliveryDash />} />
+          <Route path="active-delivery" element={<ActiveDelivery />} />
+          <Route path="available" element={<AvailableOrders />} />
+          <Route path="history" element={<DeliveryHistory />} />
+          <Route path="earnings" element={<Earnings />} />
         </Route>
 
         <Route path="/unauthorized" element={<Unauthorized />} />

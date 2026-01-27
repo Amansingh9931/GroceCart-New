@@ -14,12 +14,14 @@ export const navbarConfig = {
 
   deliveryBoy: [
     { label: "Dashboard", path: "/delivery" },
+    { label: "Available Orders", path: "/delivery/available" },
     { label: "History", path: "/delivery/history" },
     { label: "Earnings", path: "/delivery/earnings" },
   ],
 
   delivery: [
     { label: "Dashboard", path: "/delivery" },
+    { label: "Available Orders", path: "/delivery/available" },
     { label: "History", path: "/delivery/history" },
     { label: "Earnings", path: "/delivery/earnings" },
   ],

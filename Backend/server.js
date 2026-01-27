@@ -9,6 +9,7 @@ import cartRouter from "./Route/user/CartRoute.js";
 import UserProductRouter from "./Route/user/UserProductRoute.js";
 import orderRouter from "./Route/user/OrderRoute.js";
 import addressRouter from "./Route/user/AddressRoute.js";
+import deliveryRouter from "./Route/delivery/DeliveryRoute.js";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -18,7 +19,10 @@ await connectDB();
 
 
 //middleware
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5173", // your frontend URL
+  credentials: true
+}));
 app.use(express.json());
 
 
@@ -29,6 +33,7 @@ app.use("/api/cart", cartRouter);
 app.use("/api/products", UserProductRouter);
 app.use("/api/order", orderRouter);
 app.use("/api/address", addressRouter);
+app.use("/api/delivery", deliveryRouter);
 
 
 //test route

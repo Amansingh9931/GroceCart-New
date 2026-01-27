@@ -187,44 +187,110 @@ export default function Orders() {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden bg-gray-50"
                       >
-                        <div className="p-6 grid md:grid-cols-2 gap-8">
-                          {/* PAYMENT */}
-                          <div>
-                            <h4 className="font-semibold mb-3">
-                              Payment Details
-                            </h4>
-                            <p className="text-sm text-gray-600">
-                              Method: {order.paymentMethod}
-                            </p>
-                            <p className="mt-2">
-                              Status:{" "}
-                              <span className="px-2 py-1 rounded bg-yellow-100 text-yellow-700 text-xs font-semibold">
-                                {order.payment ? "Paid" : "Pending"}
-                              </span>
-                            </p>
-                          </div>
+                        <div className="p-6 space-y-8">
+                          {/* DELIVERY AGENT SECTION */}
+                          {order.deliveryAgentId ? (
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200">
+                              <h4 className="font-bold text-green-900 mb-4 flex items-center gap-2">
+                                <Truck className="w-5 h-5" />
+                                Delivery Agent
+                              </h4>
+                              <div className="space-y-3">
+                                <div>
+                                  <p className="text-sm text-green-700 font-semibold">
+                                    Agent Name
+                                  </p>
+                                  <p className="text-lg font-bold text-green-900">
+                                    {order.deliveryAgentName || "Assigned"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-green-700 font-semibold">
+                                    Status
+                                  </p>
+                                  <p className={`text-lg font-bold ${
+                                    order.status === "Delivered"
+                                      ? "text-emerald-600"
+                                      : order.status === "Out for Delivery"
+                                      ? "text-blue-600"
+                                      : "text-orange-600"
+                                  }`}>
+                                    {order.status}
+                                  </p>
+                                </div>
+                                {order.acceptedAt && (
+                                  <div>
+                                    <p className="text-sm text-green-700 font-semibold">
+                                      Accepted At
+                                    </p>
+                                    <p className="text-sm text-green-900">
+                                      {new Date(order.acceptedAt).toLocaleString()}
+                                    </p>
+                                  </div>
+                                )}
+                                {order.deliveredAt && (
+                                  <div>
+                                    <p className="text-sm text-green-700 font-semibold">
+                                      Delivered At
+                                    </p>
+                                    <p className="text-sm text-green-900">
+                                      {new Date(order.deliveredAt).toLocaleString()}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-blue-50 rounded-xl p-6 border-2 border-blue-200">
+                              <h4 className="font-bold text-blue-900 mb-2">
+                                🚚 Delivery Status
+                              </h4>
+                              <p className="text-blue-700">
+                                No delivery agent assigned yet. Your order will be available to delivery partners soon.
+                              </p>
+                            </div>
+                          )}
 
-                          {/* ADDRESS */}
-                          <div>
-                            <h4 className="font-semibold mb-3">
-                              Delivery Address
-                            </h4>
-                            <p className="text-sm text-gray-600">
-                              {order.address?.firstName}{" "}
-                              {order.address?.lastName}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {order.address?.street},{" "}
-                              {order.address?.city}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {order.address?.state}{" "}
-                              {order.address?.zipcode}
-                            </p>
-                            <p className="flex items-center gap-2 mt-2 text-sm font-semibold">
-                              <Phone className="w-4 h-4" />
-                              {order.address?.phone}
-                            </p>
+                          {/* PAYMENT & ADDRESS */}
+                          <div className="grid md:grid-cols-2 gap-8">
+                            {/* PAYMENT */}
+                            <div>
+                              <h4 className="font-semibold mb-3">
+                                Payment Details
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                Method: {order.paymentMethod}
+                              </p>
+                              <p className="mt-2">
+                                Status:{" "}
+                                <span className="px-2 py-1 rounded bg-yellow-100 text-yellow-700 text-xs font-semibold">
+                                  {order.payment ? "Paid" : "Pending"}
+                                </span>
+                              </p>
+                            </div>
+
+                            {/* ADDRESS */}
+                            <div>
+                              <h4 className="font-semibold mb-3">
+                                Delivery Address
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                {order.address?.firstName}{" "}
+                                {order.address?.lastName}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {order.address?.street},{" "}
+                                {order.address?.city}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {order.address?.state}{" "}
+                                {order.address?.zipcode}
+                              </p>
+                              <p className="flex items-center gap-2 mt-2 text-sm font-semibold">
+                                <Phone className="w-4 h-4" />
+                                {order.address?.phone}
+                              </p>
+                            </div>
                           </div>
                         </div>
 

@@ -9,30 +9,50 @@ const placeOrder = async (req, res) => {
     const userId = req.user.id;
     const { items, amount, addressId } = req.body;
 
+    console.log("[PlaceOrder] Starting order creation:", { userId, addressId, itemCount: items?.length, amount });
+
     // Verify address belongs to user
     const address = await AddressModel.findOne({ _id: addressId, userId });
     if (!address) {
+      console.log("[PlaceOrder] ❌ Address not found for user:", userId);
       return res.status(404).json({ success: false, message: "Address not found" });
     }
+
+    console.log("[PlaceOrder] ✅ Address verified:", { addressId: address._id, city: address.city });
 
     const orderData = {
       userId,
       items,
       amount,
       addressId,
+      status: "Pending",  // CRITICAL: Explicitly set for delivery system
       paymentMethod: "COD",
       payment: false,
+      deliveryAgentId: null,  // Ensure null for available orders
       date: new Date(),
     };
 
     const newOrder = new orderModel(orderData);
     await newOrder.save();
 
+    // Verify order was saved with correct fields
+    const savedOrder = await orderModel.findById(newOrder._id).populate("addressId");
+
+    console.log("[PlaceOrder] ✅ Order created successfully:", {
+      orderId: savedOrder._id,
+      userId: savedOrder.userId,
+      addressId: savedOrder.addressId?._id,
+      status: savedOrder.status,
+      deliveryAgentId: savedOrder.deliveryAgentId,
+      amount: savedOrder.amount,
+      hasAddress: !!savedOrder.addressId,
+    });
+
     await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
     res.json({ success: true, message: "Order Placed", orderId: newOrder._id });
   } catch (err) {
-    console.log(err);
+    console.log("[PlaceOrder] ❌ Error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 };

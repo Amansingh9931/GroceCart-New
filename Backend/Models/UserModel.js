@@ -46,6 +46,14 @@ const userSchema=new mongoose.Schema({
       type: Object,
       default: {}, // so new users start with empty cart
     },
+  totalEarnings: {
+    type: Number,
+    default: 0,
+  },
+  totalDeliveries: {
+    type: Number,
+    default: 0,
+  },
 },{timestamps:true});
 
 const UserModel=mongoose.model("user",userSchema);

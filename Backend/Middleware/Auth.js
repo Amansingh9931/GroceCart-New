@@ -24,4 +24,5 @@ const authUser = (req, res, next) => {
   }
 };
 
+export const userAuth = authUser;
 export default authUser;

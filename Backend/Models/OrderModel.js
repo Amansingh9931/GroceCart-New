@@ -2,7 +2,8 @@ import mongoose, { mongo } from "mongoose";
 
 const orderSchema = new mongoose.Schema({
   userId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,  // ← FIXED: Use ObjectId reference instead of String
+    ref: "user",
     required: true,
   },
   items: {
@@ -21,7 +22,8 @@ const orderSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    default: "Order Placed",
+    default: "Pending",
+    enum: ["Pending", "Accepted", "Out for Delivery", "Delivered", "Cancelled"],
   },
   paymentMethod: {
     type: String,
@@ -32,11 +34,32 @@ const orderSchema = new mongoose.Schema({
     required: true,
     default: false,
   },
+  deliveryAgentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "user",
+    default: null,
+  },
+  deliveryAgentName: {
+    type: String,
+    default: null,
+  },
+  acceptedAt: {
+    type: Date,
+    default: null,
+  },
+  deliveredAt: {
+    type: Date,
+    default: null,
+  },
+  commission: {
+    type: Number,
+    default: 0,
+  },
   date: {
     type: Date,
     required: true,
   },
-});
+}, { timestamps: true });
 
 const OrderModel =
   mongoose.models.order || mongoose.model("order", orderSchema);
