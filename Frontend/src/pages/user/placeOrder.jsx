@@ -1,12 +1,21 @@
-import React, { useState, useContext, useEffect } from "react";
-import Title from "../common/Title.jsx";
-import CartTotal from "../common/CartTotal";
-import { assets } from "../../assets/frontend_assets/assets.js";
-import { toast } from "react-toastify";
+import React, { useContext, useEffect, useState } from "react";
 import { ShopContext } from "../../Context/ShopContext.jsx";
 import { useAuth } from "../../Context/AuthContext.jsx";
 import axios from "axios";
-import { CheckCircle, Plus, Check } from "lucide-react";
+import { toast } from "react-toastify";
+import CartTotal from "../common/CartTotal";
+
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+import { FaLocationArrow } from "react-icons/fa";
+
+const markerIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
 
 const PlaceOrder = () => {
   const {
@@ -22,421 +31,295 @@ const PlaceOrder = () => {
 
   const { user } = useAuth();
 
-  const [method, setMethod] = useState("cod");
   const [placing, setPlacing] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(false);
-  const [orderInfo, setOrderInfo] = useState(null);
-  const [addresses, setAddresses] = useState([]);
-  const [selectedAddressId, setSelectedAddressId] = useState(null);
-  const [loadingAddresses, setLoadingAddresses] = useState(true);
-  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
+    phone: "",
     street: "",
     city: "",
     state: "",
     zipcode: "",
     country: "",
-    phone: "",
     mapDetails: {
-      latitude: "",
-      longitude: "",
+      latitude: null,
+      longitude: null,
       landmark: "",
       instructions: "",
     },
   });
 
-  // PRE-FILL FORM WITH USER DATA ON MOUNT
+  // ✅ Prefill user info
   useEffect(() => {
     if (user) {
-      // Split name into firstName and lastName
-      const nameParts = (user.name || "").split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-
+      const parts = user.name?.split(" ") || [];
       setFormData((prev) => ({
         ...prev,
-        firstName,
-        lastName,
+        firstName: parts[0] || "",
+        lastName: parts.slice(1).join(" ") || "",
         email: user.email || "",
         phone: user.mobile || "",
         street: user.address || "",
+        city: user.city || "",
+        state: user.state || "",
+        zipcode: user.zipcode || "",
+        country: user.country || "India",
       }));
-
-      // If phone or address is missing, redirect to edit profile
-      if (!user.mobile || !user.address) {
-        toast.info("Please complete your profile before placing an order");
-        setTimeout(() => {
-          navigate("/profile/edit?redirect=/place-order");
-        }, 2000);
-      }
     }
-  }, [user, navigate]);
+  }, [user]);
 
-  // FETCH ADDRESSES FROM DATABASE
-  useEffect(() => {
-    const fetchAddresses = async () => {
-      try {
-        const res = await axios.get(`${backend_URL}/api/address/all`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (res.data.success) {
-          setAddresses(res.data.addresses || []);
-          // Set first address as default if available
-          if (res.data.addresses.length > 0) {
-            const defaultAddr = res.data.addresses.find((a) => a.isDefault) || res.data.addresses[0];
-            setSelectedAddressId(defaultAddr._id);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching addresses:", err);
-      } finally {
-        setLoadingAddresses(false);
-      }
-    };
-
-    if (token) {
-      fetchAddresses();
+  // 📍 Live location button
+  const getLiveLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not supported");
+      return;
     }
-  }, [token, backend_URL]);
+
+    setLocationLoading(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setFormData((prev) => ({
+          ...prev,
+          mapDetails: {
+            ...prev.mapDetails,
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          },
+        }));
+        toast.success("Live location selected 📍");
+        setLocationLoading(false);
+      },
+      () => {
+        toast.error("Please allow location access");
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  // 📌 Drag pin
+  const handleMarkerDrag = (e) => {
+    const { lat, lng } = e.target.getLatLng();
+    setFormData((prev) => ({
+      ...prev,
+      mapDetails: { ...prev.mapDetails, latitude: lat, longitude: lng },
+    }));
+  };
 
   const onChangeHandler = (e) =>
     setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  // HANDLE MAP DETAILS CHANGE
   const onMapDetailsChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({
       ...p,
-      mapDetails: {
-        ...p.mapDetails,
-        [name]: value,
-      },
+      mapDetails: { ...p.mapDetails, [name]: value },
     }));
   };
 
-  // SAVE ADDRESS OR USE EXISTING
-  const saveAndPlaceOrder = async (e) => {
-    e.preventDefault();
-    setPlacing(true);
-
-    try {
-      let addressId = selectedAddressId;
-
-      // If user created a new address, save it first
-      if (showAddressForm) {
-        const addressRes = await axios.post(
-          `${backend_URL}/api/address/add`,
-          { ...formData, isDefault: addresses.length === 0 },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        if (!addressRes.data.success) {
-          toast.error("Failed to save address");
-          setPlacing(false);
-          return;
-        }
-
-        addressId = addressRes.data.address._id;
-      }
-
-      if (!addressId) {
-        toast.error("Please select or add an address");
-        setPlacing(false);
-        return;
-      }
-
-      let orderItems = [];
-
-      for (const pid in cartItems) {
-        for (const size in cartItems[pid]) {
-          if (cartItems[pid][size] > 0) {
-            const product = products.find((p) => p._id === pid);
-            if (product) {
-              orderItems.push({
-                ...product,
-                size,
-                quantity: cartItems[pid][size],
-              });
-            }
+  // 🛒 Build cart items
+  const buildOrderItems = () => {
+    const items = [];
+    for (const pid in cartItems) {
+      for (const size in cartItems[pid]) {
+        if (cartItems[pid][size] > 0) {
+          const product = products.find((p) => p._id === pid);
+          if (product) {
+            items.push({
+              ...product,
+              size,
+              quantity: cartItems[pid][size],
+            });
           }
         }
       }
+    }
+    return items;
+  };
 
-      const orderData = {
-        addressId,
-        items: orderItems,
-        amount: getCartAmount() + delivery_fee,
-      };
+  // ✅ Place order
+  const saveAndPlaceOrder = async (e) => {
+    e.preventDefault();
 
-      const res = await axios.post(
-        `${backend_URL}/api/order/place`,
-        orderData,
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      street,
+      city,
+      state,
+      zipcode,
+      country,
+    } = formData;
+
+    // Backend validation fix
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !phone ||
+      !street ||
+      !city ||
+      !state ||
+      !zipcode ||
+      !country
+    ) {
+      toast.error("Please fill all required address fields");
+      return;
+    }
+
+    if (!formData.mapDetails.latitude || !formData.mapDetails.longitude) {
+      toast.error("Please select your location on map");
+      return;
+    }
+
+    setPlacing(true);
+
+    try {
+      // 1️⃣ Save address
+      const addressRes = await axios.post(
+        `${backend_URL}/api/address/add`,
+        formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (res.data.success) {
-        setCartItems({});
-        setOrderInfo({
-          orderId: res.data.orderId,
-          eta: "9–15 mins",
-        });
-        setOrderSuccess(true);
-        toast.success("Order placed successfully 🎉");
-      } else {
-        toast.error(res.data.message);
-      }
+      const addressId = addressRes.data.address._id;
+
+      // 2️⃣ Build order
+      const orderItems = buildOrderItems();
+
+      await axios.post(
+        `${backend_URL}/api/order/place`,
+        {
+          addressId,
+          items: orderItems,
+          amount: getCartAmount() + delivery_fee,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success("Order placed successfully 🎉");
+      setCartItems({});
+      navigate("/orders");
     } catch (err) {
-      console.error(err);
+      console.log(err);
       toast.error("Failed to place order");
     } finally {
       setPlacing(false);
     }
   };
 
-  /* ----------------------------------------
-     BLINKIT-STYLE ORDER SUCCESS SCREEN
-  ---------------------------------------- */
-  if (orderSuccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center animate-fadeIn">
-          <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
+  const { latitude, longitude } = formData.mapDetails;
 
-          <h2 className="text-2xl font-semibold mb-2">
-            Order Confirmed 🎉
-          </h2>
-
-          <p className="text-gray-600 text-sm mb-6">
-            Your groceries are being packed and will reach you shortly.
-          </p>
-
-          <div className="bg-gray-50 rounded-xl p-4 text-left text-sm space-y-2">
-            <p>
-              <span className="text-gray-500">Order ID:</span>{" "}
-              <span className="font-semibold">{orderInfo.orderId}</span>
-            </p>
-            <p>
-              <span className="text-gray-500">Delivery ETA:</span>{" "}
-              <span className="font-semibold">{orderInfo.eta}</span>
-            </p>
-            <p>
-              <span className="text-gray-500">Payment:</span>{" "}
-              <span className="font-semibold uppercase">{method}</span>
-            </p>
-          </div>
-
-          <button
-            onClick={() => navigate("/orders")}
-            className="mt-6 w-full bg-black text-white py-3 rounded-xl hover:bg-gray-800 transition"
-          >
-            View My Orders
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  /* ----------------------------------------
-     PLACING ORDER LOADER
-  ---------------------------------------- */
-  if (placing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="w-14 h-14 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-700 font-medium">
-            Placing your order…
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Please don’t refresh
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  /* ----------------------------------------
-     NORMAL PLACE ORDER FORM
-  ---------------------------------------- */
   return (
     <form
       onSubmit={saveAndPlaceOrder}
-      className="w-full min-h-screen px-6 md:px-16 py-16 grid grid-cols-1 md:grid-cols-2 gap-12"
+      className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-6"
     >
-      {/* LEFT */}
-      <div>
-        <h2 className="text-2xl font-semibold mb-8">
-          SELECT ADDRESS
-        </h2>
+      <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-6">
 
-        {loadingAddresses ? (
-          <p className="text-gray-500">Loading saved addresses...</p>
-        ) : addresses.length === 0 ? (
-          <p className="text-gray-500 mb-4">No saved addresses. Create a new one.</p>
-        ) : (
-          <div className="space-y-3 mb-6">
-            {addresses.map((addr) => (
-              <div
-                key={addr._id}
-                onClick={() => {
-                  setSelectedAddressId(addr._id);
-                  setShowAddressForm(false);
-                }}
-                className={`p-4 rounded-lg border-2 cursor-pointer transition ${
-                  selectedAddressId === addr._id
-                    ? "border-green-500 bg-green-50"
-                    : "border-gray-300 hover:border-gray-400"
-                }`}
+        {/* LEFT CARD */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 space-y-4">
+          <h2 className="text-2xl font-bold mb-2">📦 Delivery Address</h2>
+
+          <div className="grid grid-cols-2 gap-3">
+            <input className="input" name="firstName" placeholder="First Name" value={formData.firstName} onChange={onChangeHandler} />
+            <input className="input" name="lastName" placeholder="Last Name" value={formData.lastName} onChange={onChangeHandler} />
+          </div>
+
+          <input className="input" name="email" placeholder="Email" value={formData.email} onChange={onChangeHandler} />
+          <input className="input" name="phone" placeholder="Phone" value={formData.phone} onChange={onChangeHandler} />
+          <input className="input" name="street" placeholder="Street Address" value={formData.street} onChange={onChangeHandler} />
+
+          <div className="grid grid-cols-2 gap-3">
+            <input className="input" name="city" placeholder="City" value={formData.city} onChange={onChangeHandler} />
+            <input className="input" name="state" placeholder="State" value={formData.state} onChange={onChangeHandler} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <input className="input" name="zipcode" placeholder="Zipcode" value={formData.zipcode} onChange={onChangeHandler} />
+            <input className="input" name="country" placeholder="Country" value={formData.country} onChange={onChangeHandler} />
+          </div>
+
+          {/* MAP SECTION */}
+          <div className="border-t pt-4">
+            <div className="flex justify-between mb-2">
+              <h3 className="font-semibold">📍 Select Location</h3>
+              <button
+                type="button"
+                onClick={getLiveLocation}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2"
               >
-                <div className="flex items-start gap-3">
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
-                    selectedAddressId === addr._id ? "border-green-500 bg-green-500" : "border-gray-300"
-                  }`}>
-                    {selectedAddressId === addr._id && <Check size={14} className="text-white" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-800">
-                      {addr.firstName} {addr.lastName}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {addr.street}, {addr.city}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {addr.state} {addr.zipcode}, {addr.country}
-                    </p>
-                    <p className="text-sm text-gray-600">📱 {addr.phone}</p>
-                    
-                    {/* MAP DETAILS IF AVAILABLE */}
-                    {addr.mapDetails && (addr.mapDetails.latitude || addr.mapDetails.landmark) && (
-                      <div className="text-xs text-gray-500 mt-2 space-y-1">
-                        {addr.mapDetails.landmark && (
-                          <p>📍 {addr.mapDetails.landmark}</p>
-                        )}
-                        {addr.mapDetails.latitude && addr.mapDetails.longitude && (
-                          <p>🗺️ {addr.mapDetails.latitude}, {addr.mapDetails.longitude}</p>
-                        )}
-                        {addr.mapDetails.instructions && (
-                          <p>📝 {addr.mapDetails.instructions}</p>
-                        )}
-                      </div>
-                    )}
-                    
-                    {addr.isDefault && (
-                      <span className="inline-block mt-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                        Default Address
-                      </span>
-                    )}
-                  </div>
+                <FaLocationArrow />
+                {locationLoading ? "Locating..." : "Use Live Location"}
+              </button>
+            </div>
+
+            {latitude && longitude && (
+              <MapContainer
+                center={[latitude, longitude]}
+                zoom={15}
+                style={{ height: "250px", borderRadius: "12px" }}
+              >
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <Marker
+                  position={[latitude, longitude]}
+                  draggable
+                  icon={markerIcon}
+                  eventHandlers={{ dragend: handleMarkerDrag }}
+                />
+              </MapContainer>
+            )}
+
+            <input
+              className="input mt-3"
+              name="landmark"
+              placeholder="Nearby Landmark"
+              value={formData.mapDetails.landmark}
+              onChange={onMapDetailsChange}
+            />
+
+            <textarea
+              className="input mt-2 resize-none"
+              rows="2"
+              name="instructions"
+              placeholder="Delivery Instructions"
+              value={formData.mapDetails.instructions}
+              onChange={onMapDetailsChange}
+            />
+          </div>
+        </div>
+
+        {/* RIGHT CARD */}
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <h2 className="text-2xl font-bold mb-4">🛒 Your Order</h2>
+
+          {/* PRODUCT LIST */}
+          <div className="space-y-3 max-h-64 overflow-y-auto mb-4">
+            {buildOrderItems().map((item, i) => (
+              <div key={i} className="flex justify-between bg-gray-50 p-3 rounded-lg">
+                <div>
+                  <p className="font-semibold">{item.productName || item.name}</p>
+                  <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                 </div>
+                <p className="font-bold">₹{item.price}</p>
               </div>
             ))}
           </div>
-        )}
 
-        {/* ADD NEW ADDRESS */}
-        <button
-          type="button"
-          onClick={() => setShowAddressForm(!showAddressForm)}
-          className="flex items-center gap-2 text-green-600 hover:text-green-700 font-medium mb-6 border-2 border-green-600 w-full py-2 rounded-lg justify-center transition hover:bg-green-50"
-        >
-          <Plus size={18} />
-          {showAddressForm ? "Cancel" : "Add New Address"}
-        </button>
-
-        {/* ADDRESS FORM */}
-        {showAddressForm && (
-          <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-            {/* BASIC ADDRESS */}
-            <div className="grid grid-cols-2 gap-4">
-              <input required name="firstName" value={formData.firstName} onChange={onChangeHandler} className="input" placeholder="First name" />
-              <input required name="lastName" value={formData.lastName} onChange={onChangeHandler} className="input" placeholder="Last name" />
-            </div>
-
-            <input required name="email" value={formData.email} onChange={onChangeHandler} className="input w-full" placeholder="Email" />
-            <input required name="street" value={formData.street} onChange={onChangeHandler} className="input w-full" placeholder="Street" />
-
-            <div className="grid grid-cols-2 gap-4">
-              <input required name="city" value={formData.city} onChange={onChangeHandler} className="input" placeholder="City" />
-              <input required name="state" value={formData.state} onChange={onChangeHandler} className="input" placeholder="State" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <input required name="zipcode" value={formData.zipcode} onChange={onChangeHandler} className="input" placeholder="Zipcode" />
-              <input required name="country" value={formData.country} onChange={onChangeHandler} className="input" placeholder="Country" />
-            </div>
-
-            <input required name="phone" value={formData.phone} onChange={onChangeHandler} className="input w-full" placeholder="Phone" />
-
-            {/* MAP DETAILS SECTION */}
-            <div className="border-t pt-4 mt-4">
-              <p className="text-sm font-semibold text-gray-700 mb-3">📍 Map Details (Optional)</p>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <input 
-                  type="number" 
-                  step="0.000001"
-                  name="latitude" 
-                  value={formData.mapDetails.latitude} 
-                  onChange={onMapDetailsChange} 
-                  className="input" 
-                  placeholder="Latitude" 
-                />
-                <input 
-                  type="number" 
-                  step="0.000001"
-                  name="longitude" 
-                  value={formData.mapDetails.longitude} 
-                  onChange={onMapDetailsChange} 
-                  className="input" 
-                  placeholder="Longitude" 
-                />
-              </div>
-
-              <input 
-                name="landmark" 
-                value={formData.mapDetails.landmark} 
-                onChange={onMapDetailsChange} 
-                className="input w-full mt-3" 
-                placeholder="Nearby landmark (e.g., Near Big Tree, Blue Gate)" 
-              />
-
-              <textarea 
-                name="instructions" 
-                value={formData.mapDetails.instructions} 
-                onChange={onMapDetailsChange} 
-                className="input w-full mt-3 resize-none" 
-                rows="2"
-                placeholder="Special delivery instructions (e.g., Ring bell twice, Door code 1234)" 
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* RIGHT */}
-      <div>
-        <CartTotal />
-
-        <div className="mt-10">
-          <Title text1="PAYMENT" text2="METHOD" />
-          <div
-            onClick={() => setMethod("cod")}
-            className="border rounded-lg p-3 mt-4 cursor-pointer flex items-center gap-3"
-          >
-            <div className={`w-4 h-4 rounded-full border ${method === "cod" && "bg-green-500"}`} />
-            <p className="text-sm font-medium">Cash on Delivery</p>
-          </div>
+          <CartTotal />
 
           <button
             type="submit"
-            className="w-full bg-black text-white py-3 rounded-xl mt-8 hover:bg-gray-800 transition"
+            disabled={placing}
+            className="w-full mt-6 bg-black hover:bg-gray-800 text-white py-3 rounded-xl font-semibold transition"
           >
-            PLACE ORDER
+            {placing ? "Placing Order..." : "PLACE ORDER"}
           </button>
         </div>
       </div>

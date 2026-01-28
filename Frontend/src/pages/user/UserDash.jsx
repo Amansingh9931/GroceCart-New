@@ -41,7 +41,7 @@ const UserDashboard = () => {
           Welcome back, {user.name}
         </h1>
         <p className="text-gray-500">
-          Here’s what’s happening with your account
+          Here's what's happening with your account
         </p>
       </div>
 

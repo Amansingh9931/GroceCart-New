@@ -166,6 +166,19 @@ const getActiveDelivery = async (req, res) => {
       return res.json({ success: true, order: null });
     }
 
+    // ❗ Check mapDetails
+    if (
+      !order.addressId ||
+      !order.addressId.mapDetails ||
+      !order.addressId.mapDetails.latitude ||
+      !order.addressId.mapDetails.longitude
+    ) {
+      return res.json({
+        success: false,
+        message: "Address location not available",
+      });
+    }
+
     const orderObj = order.toObject();
 
     // Use populated user data

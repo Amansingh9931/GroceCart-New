@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import connectDB from "./Config/db.js";
+import http from "http";
+import { setupSocket } from "./socketServer.js";
 import userRouter from "./Route/UserRoute.js";
 import adminRouter from "./Route/admin/AdminRoute.js";
 // import productRouter from "./Route/user/UserProductRoute.js";
@@ -13,9 +15,12 @@ import deliveryRouter from "./Route/delivery/DeliveryRoute.js";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+const server = http.createServer(app);
 
 //connect to database
 await connectDB();
+//setup socket
+setupSocket(server);
 
 
 //middleware
@@ -41,6 +46,7 @@ app.use("/api/delivery", deliveryRouter);
 //   res.send("Hello World!");
 // });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server + Socket.IO running on port ${PORT}`);
 });
+
