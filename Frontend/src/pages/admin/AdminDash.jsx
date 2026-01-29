@@ -1,19 +1,17 @@
 import { useAuth } from "../../Context/AuthContext.jsx";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "../../Api/axios.js";
-import { Package, Users, Truck, BarChart3 } from "lucide-react";
+import { Package, Users, Truck, BarChart3, LayoutDashboard } from "lucide-react";
 
 export default function AdminDash() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalDeliveryBoys: 0,
     totalAdmins: 0,
     totalAccounts: 0,
   });
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStats();
@@ -27,149 +25,92 @@ export default function AdminDash() {
       }
     } catch (err) {
       console.error("Error fetching stats:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      {/* Header */}
-      <div className="bg-slate-900 shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-white">👑 Admin Dashboard</h1>
-              <p className="text-slate-400 mt-2">Welcome, {user?.name}</p>
-            </div>
-            <button
-              onClick={logout}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
+    <div className="flex min-h-screen bg-gray-100">
 
-      {/* Stats Cards */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-blue-600 rounded-lg p-6 text-white shadow-lg">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-blue-100 text-sm uppercase tracking-wide">Total Customers</p>
-                <p className="text-3xl font-bold mt-2">{stats.totalUsers}</p>
-              </div>
-              <Users size={32} className="text-blue-200" />
-            </div>
-          </div>
-
-          <div className="bg-orange-600 rounded-lg p-6 text-white shadow-lg">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-orange-100 text-sm uppercase tracking-wide">Delivery Agents</p>
-                <p className="text-3xl font-bold mt-2">{stats.totalDeliveryBoys}</p>
-              </div>
-              <Truck size={32} className="text-orange-200" />
-            </div>
-          </div>
-
-          <div className="bg-green-600 rounded-lg p-6 text-white shadow-lg">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-green-100 text-sm uppercase tracking-wide">Total Accounts</p>
-                <p className="text-3xl font-bold mt-2">{stats.totalAccounts}</p>
-              </div>
-              <BarChart3 size={32} className="text-green-200" />
-            </div>
-          </div>
-
-          <div className="bg-purple-600 rounded-lg p-6 text-white shadow-lg">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-purple-100 text-sm uppercase tracking-wide">Admin Count</p>
-                <p className="text-3xl font-bold mt-2">{stats.totalAdmins}</p>
-              </div>
-              <Users size={32} className="text-purple-200" />
-            </div>
+      {/* Main */}
+      <div className="flex-1 p-6">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow">
+          <div>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <p className="text-gray-500">Welcome, {user?.name}</p>
           </div>
         </div>
 
-        {/* Menu Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Products Card */}
-          <div className="bg-white rounded-lg shadow-lg hover:shadow-xl transition overflow-hidden">
-            <div className="h-2 bg-green-600"></div>
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Package className="text-green-600" size={32} />
-                <h3 className="text-xl font-bold">Manage Products</h3>
-              </div>
-              <p className="text-gray-600 text-sm mb-4">
-                Add, edit, and delete products from your inventory
-              </p>
-              <Link
-                to="/admin/products"
-                className="inline-block bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-semibold"
-              >
-                Go to Products
-              </Link>
-            </div>
-          </div>
+        {/* Stat Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <StatCard title="Total Customers" value={stats.totalUsers} icon={<Users />} color="bg-purple-500" />
+          <StatCard title="Delivery Agents" value={stats.totalDeliveryBoys} icon={<Truck />} color="bg-blue-500" />
+          <StatCard title="Total Accounts" value={stats.totalAccounts} icon={<BarChart3 />} color="bg-green-500" />
+        </div>
 
-          {/* Users Card */}
-          <div className="bg-white rounded-lg shadow-lg hover:shadow-xl transition overflow-hidden">
-            <div className="h-2 bg-blue-600"></div>
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Users className="text-blue-600" size={32} />
-                <h3 className="text-xl font-bold">Manage Customers</h3>
-              </div>
-              <p className="text-gray-600 text-sm mb-4">
-                View customer details, contact info, and order history
-              </p>
-              <Link
-                to="/admin/users"
-                className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold"
-              >
-                View Customers
-              </Link>
-            </div>
-          </div>
-
-          {/* Delivery Agents Card */}
-          <div className="bg-white rounded-lg shadow-lg hover:shadow-xl transition overflow-hidden">
-            <div className="h-2 bg-orange-600"></div>
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Truck className="text-orange-600" size={32} />
-                <h3 className="text-xl font-bold">Delivery Agents</h3>
-              </div>
-              <p className="text-gray-600 text-sm mb-4">
-                Manage delivery agents, assignments, and performance
-              </p>
-              <Link
-                to="/admin/delivery-agents"
-                className="inline-block bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition font-semibold"
-              >
-                View Agents
-              </Link>
-            </div>
-          </div>
+        {/* Management Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <DashboardCard
+            title="Manage Products"
+            desc="Add, edit and remove products"
+            icon={<Package />}
+            link="/admin/products"
+          />
+          <DashboardCard
+            title="Manage Customers"
+            desc="View customer information"
+            icon={<Users />}
+            link="/admin/users"
+          />
+          <DashboardCard
+            title="Delivery Agents"
+            desc="Manage delivery staff"
+            icon={<Truck />}
+            link="/admin/delivery-agents"
+          />
         </div>
 
         {/* Coming Soon */}
-        <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
-          <h3 className="text-lg font-bold text-yellow-900 mb-2">Coming Soon</h3>
-          <ul className="text-yellow-800 text-sm space-y-1">
+        <div className="mt-10 bg-white rounded-xl p-6 shadow">
+          <h3 className="font-bold mb-3">Coming Soon</h3>
+          <ul className="text-gray-600 space-y-1">
             <li>• Orders & Analytics</li>
-            <li>• Delivery assignments</li>
             <li>• Revenue reports</li>
-            <li>• Customer feedback & ratings</li>
+            <li>• Feedback system</li>
+            <li>• Performance charts</li>
           </ul>
         </div>
       </div>
     </div>
   );
 }
+
+/* Reusable Components */
+
+const StatCard = ({ title, value, icon, color }) => (
+  <div className="bg-white rounded-xl shadow p-5 flex justify-between items-center">
+    <div>
+      <p className="text-gray-500 text-sm">{title}</p>
+      <h2 className="text-2xl font-bold">{value}</h2>
+    </div>
+    <div className={`${color} p-3 rounded-lg text-white`}>
+      {icon}
+    </div>
+  </div>
+);
+
+const DashboardCard = ({ title, desc, icon, link }) => (
+  <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6">
+    <div className="flex items-center gap-3 mb-3 text-indigo-600">
+      {icon}
+      <h3 className="font-bold text-lg">{title}</h3>
+    </div>
+    <p className="text-gray-500 mb-4">{desc}</p>
+    <Link
+      to={link}
+      className="inline-block bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+    >
+      Open
+    </Link>
+  </div>
+);
