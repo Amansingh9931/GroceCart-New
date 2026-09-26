@@ -1,47 +1,54 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import Home from "./pages/Home.jsx";
-import Login from "./pages/Login.jsx";
-import Signup from "./pages/Signup.jsx";
-import LayoutAdmin from "./pages/admin/LayoutAdmin.jsx";
-import LayoutDelivery from "./pages/delivery/LayoutDelivery.jsx";
-import LayoutUser from "./pages/user/LayoutUser.jsx";
-import AdminDash from "./pages/admin/AdminDash.jsx";
-import AdminProducts from "./pages/admin/Products.jsx";
-import ProductsList from "./pages/admin/ProductsList.jsx";
-import ProductsEdit from "./pages/admin/ProductsEdit.jsx";
-import AdminUsers from "./pages/admin/Users.jsx";
-import AdminDeliveryAgents from "./pages/admin/DeliveryAgents.jsx";
-import UserDetails from "./pages/admin/UserDetails.jsx";
-import AgentDetails from "./pages/admin/AgentDetails.jsx";
-import DeliveryDash from "./pages/delivery/DeliveryDash.jsx";
-import AvailableOrders from "./pages/delivery/AvailableOrders.jsx";
-import ActiveDelivery from "./pages/delivery/ActiveDelivery.jsx";
-import DeliveryHistory from "./pages/delivery/DeliveryHistory.jsx";
-import Earnings from "./pages/delivery/Earnings.jsx";
-import UserDash from "./pages/user/UserDash.jsx";
-import Profile from "./pages/common/Profile.jsx";
-import EditProfile from "./pages/common/EditProfile.jsx";
 import Navbar from "./pages/common/Navbar.jsx";
-import Cart from "./pages/common/Cart.jsx";
-import Products from "./pages/user/Products.jsx";
-import ProductDetails from "./pages/user/ProductDetails.jsx";
-import Orders from "./pages/user/Orders.jsx";
-import AdminOrders from "./pages/admin/Orders.jsx";
-import PlaceOrder from "./pages/user/placeOrder.jsx";
+import CartDrawer from "./pages/common/CartDrawer.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import Unauthorized from "./pages/Unauthorized.jsx";
+
+const Login = lazy(() => import("./pages/Login.jsx"));
+const Signup = lazy(() => import("./pages/Signup.jsx"));
+const Cart = lazy(() => import("./pages/common/Cart.jsx"));
+const Products = lazy(() => import("./pages/user/Products.jsx"));
+const ProductDetails = lazy(() => import("./pages/user/ProductDetails.jsx"));
+const PlaceOrder = lazy(() => import("./pages/user/placeOrder.jsx"));
+const Orders = lazy(() => import("./pages/user/Orders.jsx"));
+const Profile = lazy(() => import("./pages/common/Profile.jsx"));
+const EditProfile = lazy(() => import("./pages/common/EditProfile.jsx"));
+const Unauthorized = lazy(() => import("./pages/Unauthorized.jsx"));
+const LayoutUser = lazy(() => import("./pages/user/LayoutUser.jsx"));
+const UserDash = lazy(() => import("./pages/user/UserDash.jsx"));
+const LayoutAdmin = lazy(() => import("./pages/admin/LayoutAdmin.jsx"));
+const AdminDash = lazy(() => import("./pages/admin/AdminDash.jsx"));
+const AdminProducts = lazy(() => import("./pages/admin/Products.jsx"));
+const ProductsList = lazy(() => import("./pages/admin/ProductsList.jsx"));
+const ProductsEdit = lazy(() => import("./pages/admin/ProductsEdit.jsx"));
+const AdminUsers = lazy(() => import("./pages/admin/Users.jsx"));
+const AdminDeliveryAgents = lazy(() => import("./pages/admin/DeliveryAgents.jsx"));
+const UserDetails = lazy(() => import("./pages/admin/UserDetails.jsx"));
+const AgentDetails = lazy(() => import("./pages/admin/AgentDetails.jsx"));
+const AdminOrders = lazy(() => import("./pages/admin/Orders.jsx"));
+const LayoutDelivery = lazy(() => import("./pages/delivery/LayoutDelivery.jsx"));
+const DeliveryDash = lazy(() => import("./pages/delivery/DeliveryDash.jsx"));
+const AvailableOrders = lazy(() => import("./pages/delivery/AvailableOrders.jsx"));
+const ActiveDelivery = lazy(() => import("./pages/delivery/ActiveDelivery.jsx"));
+const DeliveryHistory = lazy(() => import("./pages/delivery/DeliveryHistory.jsx"));
+const Earnings = lazy(() => import("./pages/delivery/Earnings.jsx"));
 
 function App() {
   return (
     <>
       <Navbar />
+      <CartDrawer />
 
+      <Suspense fallback={<div className="grid min-h-[50vh] place-items-center bg-slate-50 text-sm text-slate-500">Loading page…</div>}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/signin" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/shop" element={<Products />} />
         <Route path="/products/:id" element={<ProductDetails />} />
         <Route
           path="/place-order"
@@ -128,6 +135,7 @@ function App() {
 
         <Route path="/unauthorized" element={<Unauthorized />} />
       </Routes>
+      </Suspense>
     </>
   );
 }

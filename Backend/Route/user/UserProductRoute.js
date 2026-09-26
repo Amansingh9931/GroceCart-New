@@ -1,10 +1,10 @@
 import express from "express";
-import { listProduct, singleProduct } from "../../Controllers/productController.js";
+import { listAllProducts, singleProduct } from "../../Controllers/productController.js";
 
 const router = express.Router();
 
 // Public product listing used by frontend
-router.get("/list", listProduct);
+router.get("/list", listAllProducts);
 
 // Single product by id
 router.get("/:id", singleProduct);

@@ -1,7 +1,7 @@
 // src/context/ShopContext.jsx
 import { createContext, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import axios from "axios";
+import api from "../Api/axios.js";
 import { useNavigate } from "react-router-dom";
 
 export const ShopContext = createContext();
@@ -16,74 +16,61 @@ const ShopCartProvider = ({ children }) => {
   const [showSearch, setShowSearch] = useState(false);
   const [cartItems, setCartItems] = useState({});
   const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState("");
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [token, setToken] = useState(() => localStorage.getItem("token") || "");
   const isInitialSync = useRef(true);
+  const cartItemsRef = useRef({});
   const navigate = useNavigate();
 
-  // ADD TO CART
-  const addToCart = async (itemId, size) => {
-    if (!size) {
-      toast.error("Please select the size");
-      return;
-    }
-
-    // local update
-    const cartData = structuredClone(cartItems);
-    if (!cartData[itemId]) cartData[itemId] = {};
-    cartData[itemId][size] = (cartData[itemId][size] || 0) + 1;
-    setCartItems(cartData);
-
-    if (token) {
-      try {
-        await axios.post(
-          `${backend_URL}/api/cart/add`,
-          { itemId, size },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-      } catch (err) {
-        console.log(err);
-        toast.error(err.response?.data?.message || "Failed to sync cart");
-      }
-    }
+  const replaceCartItems = (nextCart) => {
+    const safeCart = nextCart && typeof nextCart === "object" ? nextCart : {};
+    cartItemsRef.current = safeCart;
+    setCartItems(safeCart);
   };
 
-  // CART COUNT
+  // All cart writes go through this helper so rapid clicks never calculate from
+  // a stale React render.
+  const changeCart = (updater) => {
+    const nextCart = updater(structuredClone(cartItemsRef.current || {}));
+    replaceCartItems(nextCart);
+    return nextCart;
+  };
+
+  const addToCart = (itemId, size = "standard", amount = 1) => {
+    if (!itemId) return;
+    const safeAmount = Math.max(1, Math.floor(Number(amount) || 1));
+    changeCart((cartData) => {
+      if (!cartData[itemId]) cartData[itemId] = {};
+      cartData[itemId][size] = (Number(cartData[itemId][size]) || 0) + safeAmount;
+      return cartData;
+    });
+  };
+
+  const updateQuantity = (itemId, size = "standard", quantity = 0) => {
+    if (!itemId) return;
+    const safeQuantity = Math.max(0, Math.floor(Number(quantity) || 0));
+    changeCart((cartData) => {
+      if (safeQuantity === 0) {
+        if (cartData[itemId]) {
+          delete cartData[itemId][size];
+          if (Object.keys(cartData[itemId]).length === 0) delete cartData[itemId];
+        }
+      } else {
+        if (!cartData[itemId]) cartData[itemId] = {};
+        cartData[itemId][size] = safeQuantity;
+      }
+      return cartData;
+    });
+  };
+
   const getCartCount = () => {
     let total = 0;
     for (const productId in cartItems) {
-      for (const size in cartItems[productId]) {
-        total += cartItems[productId][size];
-      }
+      for (const size in cartItems[productId]) total += Number(cartItems[productId][size]) || 0;
     }
     return total;
-  };
-
-  // UPDATE QUANTITY
-  const updateQuantity = async (itemId, size, quantity) => {
-    const cartData = structuredClone(cartItems);
-    cartData[itemId][size] = quantity;
-    setCartItems(cartData);
-
-    if (token) {
-      try {
-        await axios.post(
-          `${backend_URL}/api/cart/update`,
-          { itemId, size, quantity },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-      } catch (err) {
-        console.log(err);
-        toast.error(err.response?.data?.message || "Failed to update cart");
-      }
-    }
   };
 
   // CART TOTAL AMOUNT
@@ -104,15 +91,19 @@ const ShopCartProvider = ({ children }) => {
   // FETCH PRODUCT DATA
   const getProductData = async () => {
     try {
-      const res = await axios.get(`${backend_URL}/api/products/list`);
+      setProductsLoading(true);
+      setProductsError("");
+      const res = await api.get("/api/products/list");
       if (res.data?.success) {
-        setProducts(res.data.products);
+        setProducts(res.data.products || []);
       } else {
-        toast.error(res.data.message || "Failed to load products");
+        setProductsError(res.data?.message || "Failed to load products");
       }
     } catch (err) {
       console.log(err);
-      toast.error("Error loading products");
+      setProductsError("Could not load products. Please try again.");
+    } finally {
+      setProductsLoading(false);
     }
   };
 
@@ -121,8 +112,8 @@ const ShopCartProvider = ({ children }) => {
     try {
       // console.log("CALLING GET CART WITH TOKEN:", tokenParam);
 
-      const response = await axios.post(
-        `${backend_URL}/api/cart/get`,
+      const response = await api.post(
+        "/api/cart/get",
         {},
         {
           headers: {
@@ -132,7 +123,7 @@ const ShopCartProvider = ({ children }) => {
       );
 
       if (response.data.success) {
-        setCartItems(response.data.cartData || {});
+        replaceCartItems(response.data.cartData || {});
         // mark initial server load complete so subsequent cart changes sync
         isInitialSync.current = false;
       }
@@ -143,7 +134,7 @@ const ShopCartProvider = ({ children }) => {
         // token invalid or expired → clear it
         localStorage.removeItem("token");
         setToken("");
-        setCartItems({});
+        replaceCartItems({});
         toast.info("Session expired, please login again.");
       } else {
         toast.error(err.response?.data?.message || "Failed to load cart");
@@ -163,7 +154,7 @@ const ShopCartProvider = ({ children }) => {
         const stored =
           localStorage.getItem("cartItems") || localStorage.getItem("cart") || "{}";
         const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === "object") setCartItems(parsed);
+        if (parsed && typeof parsed === "object") replaceCartItems(parsed);
       } catch (err) {
         console.log("Error parsing stored cart:", err);
       }
@@ -195,8 +186,8 @@ const ShopCartProvider = ({ children }) => {
 
     const sync = async () => {
       try {
-        await axios.post(
-          `${backend_URL}/api/cart/set`,
+        await api.post(
+          "/api/cart/set",
           { cartData: cartItems },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -205,7 +196,8 @@ const ShopCartProvider = ({ children }) => {
       }
     };
 
-    sync();
+    const syncDelay = setTimeout(sync, 300);
+    return () => clearTimeout(syncDelay);
   }, [cartItems, token]);
 
   // Merge guest cart (localStorage) into user's backend cart
@@ -219,8 +211,8 @@ const ShopCartProvider = ({ children }) => {
       // fetch existing server cart
       let existing = {};
       try {
-        const res = await axios.post(
-          `${backend_URL}/api/cart/get`,
+        const res = await api.post(
+          "/api/cart/get",
           {},
           { headers: { Authorization: `Bearer ${tokenParam}` } }
         );
@@ -251,8 +243,8 @@ const ShopCartProvider = ({ children }) => {
         for (const size in sizes) {
           const quantity = Number(sizes[size] || 0);
           try {
-            await axios.post(
-              `${backend_URL}/api/cart/update`,
+            await api.post(
+              "/api/cart/update",
               { itemId, size, quantity },
               { headers: { Authorization: `Bearer ${tokenParam}` } }
             );
@@ -273,6 +265,11 @@ const ShopCartProvider = ({ children }) => {
 
   const value = {
     products,
+    productsLoading,
+    productsError,
+    getProductData,
+    cartDrawerOpen,
+    setCartDrawerOpen,
     currency,
     delivery_fee,
     search,
@@ -280,7 +277,7 @@ const ShopCartProvider = ({ children }) => {
     showSearch,
     setShowSearch,
     cartItems,
-    setCartItems,
+    setCartItems: replaceCartItems,
     addToCart,
     getCartCount,
     updateQuantity,

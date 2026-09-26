@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+// eslint-disable-next-line no-unused-vars -- used as the JSX namespace (motion.div)
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -30,7 +31,7 @@ const Login = ({ initialMode = "login" }) => {
     else if (user.role === "admin") navigate("/admin", { replace: true });
     else if (user.role === "deliveryBoy") navigate("/delivery", { replace: true });
     else navigate("/user", { replace: true });
-  }, [user, location]);
+  }, [user, location, navigate]);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -216,6 +217,14 @@ const Login = ({ initialMode = "login" }) => {
             <div className="mt-4">
               <GoogleLogin onSuccess={handleGoogleLogin} />
             </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/shop")}
+              className="mt-4 w-full rounded-xl border border-white/50 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              Continue as guest
+            </button>
           </motion.div>
 
           {/* SIGNUP */}

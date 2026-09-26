@@ -1,6 +1,7 @@
 import cloudinary from "../Config/cloudinary.js";
 import productModel from "../Models/ProductModel.js";
 import mongoose from "mongoose";
+import { findCatalogProduct, getCatalogProducts } from "../Services/catalogService.js";
 
 const addProduct = async (req, res) => {
   try {
@@ -149,6 +150,11 @@ const singleProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const catalogProduct = await findCatalogProduct(id);
+    if (catalogProduct) {
+      return res.status(200).json({ success: true, product: catalogProduct });
+    }
+
     // Invalid Mongo ID
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -201,5 +207,25 @@ const listProduct = async (req, res) => {
   }
 };
 
+// Public catalogue: products created in MongoDB plus the bundled CSV catalogue.
+const listAllProducts = async (req, res) => {
+  try {
+    const [databaseProducts, catalogProducts] = await Promise.all([
+      // Listing only reads product fields; lean objects avoid Mongoose document
+      // hydration for a faster catalogue response.
+      productModel.find({}).lean(),
+      getCatalogProducts(),
+    ]);
 
-export { addProduct, editProduct, deleteProduct,singleProduct,listProduct};
+    res.json({
+      success: true,
+      products: [...databaseProducts, ...catalogProducts],
+    });
+  } catch (err) {
+    console.error("List all products error:", err);
+    res.status(500).json({ success: false, message: "Failed to load products" });
+  }
+};
+
+
+export { addProduct, editProduct, deleteProduct, singleProduct, listProduct, listAllProducts };

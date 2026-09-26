@@ -84,7 +84,7 @@ const UserDashboard = () => {
 
                   {/* SIZE */}
                   <p onClick={() => navigate(`/products/${p._id}`)} className="text-xs text-gray-500 mt-1">
-                    500 ml
+                    {p.quantity || "500 ml"}
                   </p>
 
                   {/* PRICE + CART CONTROL */}

@@ -3,20 +3,16 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext.jsx";
 import { ShopContext } from "../Context/ShopContext.jsx";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { ShoppingCart, Heart } from "lucide-react";
 
 export default function Home() {
   const navigate = useNavigate();
   const { user, loading: authLoading, logout } = useAuth();
-  const { addToCart, backend_URL, currency } = useContext(ShopContext);
+  const { addToCart, currency, products, productsLoading: loading } = useContext(ShopContext);
   const redirected = useRef(false);
 
   const [cartCount, setCartCount] = useState(0);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedSizes, setSelectedSizes] = useState({});
 
   useEffect(() => {
     const computeCount = () => {
@@ -51,27 +47,6 @@ export default function Home() {
     window.addEventListener("storage", computeCount);
     return () => window.removeEventListener("storage", computeCount);
   }, []);
-
-  // FETCH PRODUCTS
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await axios.get(`${backend_URL}/api/products/list`);
-        if (res.data?.success) {
-          setProducts(res.data.products || []);
-        } else {
-          toast.error("Failed to load products");
-        }
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        toast.error("Error loading products");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [backend_URL]);
 
   const handleLogout = () => {
     logout();
@@ -211,25 +186,6 @@ export default function Home() {
                       {product.category || "Grocery"}
                     </p>
 
-                    {/* SIZE SELECTOR */}
-                    {product.sizes && product.sizes.length > 0 && (
-                      <div className="mt-2 flex gap-1 flex-wrap">
-                        {product.sizes.map((size) => (
-                          <button
-                            key={size}
-                            onClick={() => setSelectedSizes({ ...selectedSizes, [product._id]: size })}
-                            className={`text-xs px-2 py-1 rounded border transition ${
-                              selectedSizes[product._id] === size
-                                ? "bg-green-500 text-white border-green-500"
-                                : "border-gray-300 text-gray-600 hover:border-green-500"
-                            }`}
-                          >
-                            {size}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
                     {/* PRICE & CART */}
                     <div className="flex items-center justify-between mt-3">
                       <div>
@@ -246,13 +202,8 @@ export default function Home() {
                       </div>
                       <button
                         onClick={() => {
-                          const size = selectedSizes[product._id] || product.sizes?.[0];
-                          if (size) {
-                            addToCart(product._id, size);
-                            toast.success("Added to cart!");
-                          } else {
-                            toast.error("Please select a size");
-                          }
+                          addToCart(product._id);
+                          toast.success("Added to cart!");
                         }}
                         className="bg-green-500 hover:bg-green-600 text-white rounded-lg p-2 transition"
                       >
