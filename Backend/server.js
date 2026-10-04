@@ -16,6 +16,10 @@ import deliveryRouter from "./Route/delivery/DeliveryRoute.js";
 const app = express();
 const PORT = process.env.PORT || 8000;
 const server = http.createServer(app);
+const corsOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 //connect to database
 await connectDB();
@@ -25,8 +29,8 @@ setupSocket(server);
 
 //middleware
 app.use(cors({
-  origin: "http://localhost:5173", // your frontend URL
-  credentials: true
+  origin: corsOrigins,
+  credentials: true,
 }));
 app.use(express.json());
 

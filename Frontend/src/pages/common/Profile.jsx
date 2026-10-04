@@ -23,7 +23,7 @@ const Profile = () => {
     try {
       // 🔌 Backend API (you will implement this)
       const res = await axios.put(
-        "http://localhost:8000/api/user/profile",
+        `${import.meta.env.VITE_BACKEND_URL}/api/user/profile`,
         form,
         {
           headers: {

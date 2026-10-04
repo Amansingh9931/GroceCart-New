@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 
-const catalogFileUrl = new URL("../../data.py", import.meta.url);
+// The bundled catalogue lives alongside the backend application so it is
+// included in both local runs and the backend Docker image.
+const catalogFileUrl = new URL("../data.py", import.meta.url);
 let catalogPromise;
 
 // The catalogue is CSV data stored in data.py. This parser supports quoted
