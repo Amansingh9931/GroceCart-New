@@ -24,10 +24,17 @@ export default function Login({ initialMode = "login" }) {
     setSuccessMessage("");
   }, [initialMode]);
 
+  const getHomeRouteByRole = (role) => {
+    const r = (role || "").toLowerCase();
+    if (r === "admin") return "/admin";
+    if (r === "deliveryboy" || r === "delivery") return "/delivery";
+    return "/";
+  };
+
   useEffect(() => {
     if (!user) return;
     const from = location.state?.from?.pathname;
-    navigate(from || (user.role === "admin" ? "/admin" : user.role === "deliveryBoy" ? "/delivery" : "/user"), { replace: true });
+    navigate(from || getHomeRouteByRole(user.role), { replace: true });
   }, [user, location.state, navigate]);
 
   const switchMode = (nextMode) => {
@@ -47,7 +54,7 @@ export default function Login({ initialMode = "login" }) {
   const finishLogin = (result) => {
     login(result.user, result.token);
     const from = location.state?.from?.pathname;
-    navigate(from || (result.user.role === "admin" ? "/admin" : result.user.role === "deliveryBoy" ? "/delivery" : "/user"), { replace: true });
+    navigate(from || getHomeRouteByRole(result.user?.role), { replace: true });
   };
 
   const handleSubmit = async (event) => {

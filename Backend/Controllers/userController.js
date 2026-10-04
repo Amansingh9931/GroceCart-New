@@ -384,12 +384,30 @@ export const forgotPassword = async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    // 🔒 SECURITY RESTRICTION: Admin password CANNOT be changed via public forgot password
+    const adminEmailEnv = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+    if (adminEmailEnv && normalizedEmail === adminEmailEnv) {
+      return res.status(403).json({
+        success: false,
+        message: "Security Restriction: Administrator password cannot be reset via public forgot password. Please update server environment variables directly.",
+      });
+    }
+
     const user = await UserModel.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(404).json({
         success: false,
         message: "No registered account found with this email",
+      });
+    }
+
+    // 🔒 SECURITY RESTRICTION: Database user with admin role
+    if (user.role === "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Security Restriction: Administrator accounts cannot be reset via forgot password.",
       });
     }
 

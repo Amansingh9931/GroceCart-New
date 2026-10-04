@@ -63,10 +63,13 @@ const placeOrderStripe = async (req, res) => {};
 //placing orders using razorpay method
 const placeOrderRazorpay = async (req, res) => {};
 
-// all order data for admin
+// all order data for admin (most recent first)
 const allOrders = async (req, res) => {
   try {
-    const orders = await orderModel.find({}).populate("addressId");
+    const orders = await orderModel
+      .find({})
+      .sort({ date: -1, createdAt: -1 })
+      .populate("addressId");
     
     // Fetch product images for each item in orders
     const ordersWithImages = await Promise.all(
@@ -102,11 +105,14 @@ const allOrders = async (req, res) => {
   }
 };
 
-// order data for frontend
+// order data for frontend (most recent first)
 const userOrders = async (req, res) => {
   try {
     const userId = req.user.id;
-    const orders = await orderModel.find({ userId }).populate("addressId");
+    const orders = await orderModel
+      .find({ userId })
+      .sort({ date: -1, createdAt: -1 })
+      .populate("addressId");
 
     // Fetch product images for each item in orders
     const ordersWithImages = await Promise.all(

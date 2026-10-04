@@ -9,18 +9,18 @@ import {
   getEarnings,
   rejectOrder,
 } from "../../Controllers/deliveryController.js";
-import { userAuth } from "../../Middleware/Auth.js";
+import deliveryAuth from "../../Middleware/deliveryAuth.js";
 
 const router = express.Router();
 
-// Delivery routes (all require authentication)
-router.get("/available-orders", userAuth, getAvailableOrders);
-router.post("/accept-order", userAuth, acceptOrder);
-router.post("/reject-order", userAuth, rejectOrder);
-router.get("/active-delivery", userAuth, getActiveDelivery);
-router.post("/mark-out-for-delivery", userAuth, markOutForDelivery);
-router.post("/mark-delivered", userAuth, markDelivered);
-router.get("/history", userAuth, getDeliveryHistory);
-router.get("/earnings", userAuth, getEarnings);
+// Delivery routes (all strictly guarded by delivery partner RBAC)
+router.get("/available-orders", deliveryAuth, getAvailableOrders);
+router.post("/accept-order", deliveryAuth, acceptOrder);
+router.post("/reject-order", deliveryAuth, rejectOrder);
+router.get("/active-delivery", deliveryAuth, getActiveDelivery);
+router.post("/mark-out-for-delivery", deliveryAuth, markOutForDelivery);
+router.post("/mark-delivered", deliveryAuth, markDelivered);
+router.get("/history", deliveryAuth, getDeliveryHistory);
+router.get("/earnings", deliveryAuth, getEarnings);
 
 export default router;

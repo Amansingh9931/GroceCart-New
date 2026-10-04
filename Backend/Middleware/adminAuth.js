@@ -24,8 +24,8 @@ const adminAuth = (req, res, next) => {
     req.user = token_decoded;
     next();
   } catch (err) {
-    console.log(err);
-    return res.json({ success: false, message: err.message });
+    console.error("adminAuth error:", err);
+    return res.status(401).json({ success: false, message: "Invalid or expired admin session. Please log in again." });
   }
 };
 

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import Home from "./pages/Home.jsx";
 import Navbar from "./pages/common/Navbar.jsx";
@@ -120,7 +120,7 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<UserDash />} />
+          <Route index element={<Navigate to="/" replace />} />
         </Route>
 
         {/* DELIVERY */}

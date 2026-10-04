@@ -454,6 +454,34 @@ export default function Navbar() {
 
                   {/* Menu Items matching Screenshot */}
                   <div className="py-2 text-sm text-slate-700 font-medium">
+                    {user?.role === "admin" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          closeMenu();
+                          navigate("/admin");
+                        }}
+                        className="flex w-full items-center justify-between px-5 py-2 text-left bg-emerald-50/80 text-emerald-800 font-bold hover:bg-emerald-100 transition"
+                      >
+                        <span>Admin Console</span>
+                        <span className="text-[10px] rounded bg-emerald-200 px-1.5 py-0.5">Admin ↗</span>
+                      </button>
+                    )}
+
+                    {(user?.role === "deliveryBoy" || user?.role === "delivery") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          closeMenu();
+                          navigate("/delivery");
+                        }}
+                        className="flex w-full items-center justify-between px-5 py-2 text-left bg-emerald-50/80 text-emerald-800 font-bold hover:bg-emerald-100 transition"
+                      >
+                        <span>Delivery Fleet Hub</span>
+                        <span className="text-[10px] rounded bg-emerald-200 px-1.5 py-0.5">Fleet 🛵</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => {
