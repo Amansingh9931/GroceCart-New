@@ -2,6 +2,10 @@ import cloudinary from "../Config/cloudinary.js";
 import productModel from "../Models/ProductModel.js";
 import mongoose from "mongoose";
 import { findCatalogProduct, getCatalogProducts } from "../Services/catalogService.js";
+import { cacheDelete, cacheGet, cacheSet } from "../Services/cacheService.js";
+
+const CATALOGUE_CACHE_KEY = "catalogue:all-products:v1";
+const CATALOGUE_CACHE_TTL_SECONDS = 300;
 
 const addProduct = async (req, res) => {
   try {
@@ -50,6 +54,7 @@ const addProduct = async (req, res) => {
     console.log("Product created:", productData);
 
     await productData.save();
+    await cacheDelete(CATALOGUE_CACHE_KEY);
 
     res.json({ success: true, message: "Product added successfully" });
   } catch (err) {
@@ -103,6 +108,7 @@ const editProduct = async (req, res) => {
     }
 
     await product.save();
+    await cacheDelete(CATALOGUE_CACHE_KEY);
 
     res.json({
       success: true,
@@ -132,6 +138,7 @@ const deleteProduct = async (req, res) => {
     }
 
     await productModel.findByIdAndDelete(id);
+    await cacheDelete(CATALOGUE_CACHE_KEY);
 
     res.json({
       success: true,
@@ -210,6 +217,11 @@ const listProduct = async (req, res) => {
 // Public catalogue: products created in MongoDB plus the bundled CSV catalogue.
 const listAllProducts = async (req, res) => {
   try {
+    const cachedCatalogue = await cacheGet(CATALOGUE_CACHE_KEY);
+    if (cachedCatalogue) {
+      return res.json({ success: true, products: cachedCatalogue, cached: true });
+    }
+
     const [databaseProducts, catalogProducts] = await Promise.all([
       // Listing only reads product fields; lean objects avoid Mongoose document
       // hydration for a faster catalogue response.
@@ -217,10 +229,9 @@ const listAllProducts = async (req, res) => {
       getCatalogProducts(),
     ]);
 
-    res.json({
-      success: true,
-      products: [...databaseProducts, ...catalogProducts],
-    });
+    const products = [...databaseProducts, ...catalogProducts];
+    await cacheSet(CATALOGUE_CACHE_KEY, products, CATALOGUE_CACHE_TTL_SECONDS);
+    res.json({ success: true, products, cached: false });
   } catch (err) {
     console.error("List all products error:", err);
     res.status(500).json({ success: false, message: "Failed to load products" });

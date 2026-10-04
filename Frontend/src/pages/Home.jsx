@@ -1,227 +1,28 @@
-import React, { useEffect, useState, useContext, useRef } from "react";
-import { motion } from "framer-motion";
+import { useContext, useMemo } from "react";
+import { ArrowRight, Clock3, MapPin, ShoppingBasket, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../Context/AuthContext.jsx";
 import { ShopContext } from "../Context/ShopContext.jsx";
-import { toast } from "react-toastify";
-import { ShoppingCart, Heart } from "lucide-react";
+import { SHOP_CATEGORIES } from "../Config/shopCategories.js";
+
+const fallbackImage = "https://placehold.co/360x280/f1f5f9/64748b?text=GroceCart";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, logout } = useAuth();
-  const { addToCart, currency, products, productsLoading: loading } = useContext(ShopContext);
-  const redirected = useRef(false);
-
-  const [cartCount, setCartCount] = useState(0);
-
-  useEffect(() => {
-    const computeCount = () => {
-      try {
-        const stored =
-          localStorage.getItem("cartItems") || localStorage.getItem("cart") || "{}";
-        const parsed = JSON.parse(stored);
-
-        let count = 0;
-
-        if (Array.isArray(parsed)) {
-          // array of items
-          count = parsed.reduce((s, it) => s + (it.quantity || 1), 0);
-        } else if (parsed && typeof parsed === "object") {
-          // object mapping productId -> size -> qty (shape used in Cart.jsx)
-          for (const pid in parsed) {
-            const sizes = parsed[pid];
-            if (!sizes) continue;
-            for (const sz in sizes) {
-              count += Number(sizes[sz] || 0);
-            }
-          }
-        }
-
-        setCartCount(count);
-      } catch (e) {
-        setCartCount(0);
-      }
-    };
-
-    computeCount();
-    window.addEventListener("storage", computeCount);
-    return () => window.removeEventListener("storage", computeCount);
-  }, []);
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
-  // Redirect logged-in users to their dashboard (ONLY ONCE)
-  useEffect(() => {
-    if (authLoading) return; // Wait for auth to load
-    
-    if (user && !redirected.current) {
-      redirected.current = true;
-      
-      if (user.role === "admin") {
-        navigate("/admin", { replace: true });
-      } else if (user.role === "deliveryBoy") {
-        navigate("/delivery", { replace: true });
-      } else if (user.role === "user") {
-        navigate("/user", { replace: true });
-      }
-    }
-  }, [user, authLoading, navigate]);
+  const { products, productsLoading, addToCart } = useContext(ShopContext);
+  const popularProducts = useMemo(() => products.slice(0, 8), [products]);
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* HERO SECTION */}
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="mx-auto mt-16 max-w-4xl text-center px-4"
-      >
-        <h2 className="text-4xl font-extrabold text-gray-800 md:text-5xl">
-          Fresh Groceries,{" "}
-          <span className="text-green-600">Delivered Fast</span>
-        </h2>
-
-        <p className="mt-6 text-lg text-gray-600">
-          Order fresh vegetables, fruits, and daily essentials at the best
-          prices with lightning-fast delivery.
-        </p>
-
-        <div className="mt-8 flex justify-center gap-4">
-          <button
-            onClick={() => navigate("/products")}
-            className="rounded-xl bg-green-600 px-8 py-3 text-white shadow-lg hover:bg-green-700 transition"
-          >
-            Shop Now
-          </button>
-
-          {!user && (
-            <button
-              onClick={() => navigate("/signin")}
-              className="rounded-xl border-2 border-green-600 px-8 py-3 text-green-600 hover:bg-green-50 transition"
-            >
-              Get Started
-            </button>
-          )}
+    <main className="min-h-screen bg-slate-50 pb-14 text-slate-900">
+      <section className="border-b border-emerald-100 bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 text-white">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:py-20">
+          <div><p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium"><Clock3 size={16} /> Everyday delivery, made simple</p><h1 className="mt-5 max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">Fresh groceries for every day.</h1><p className="mt-5 max-w-xl text-lg leading-8 text-emerald-50">Shop fresh produce, pantry staples, and home essentials from one reliable place.</p><div className="mt-8 flex flex-wrap gap-3"><button onClick={() => navigate("/shop")} className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-50">Shop groceries <ArrowRight size={18} /></button><button onClick={() => navigate("/signup")} className="rounded-xl border border-white/35 px-5 py-3 font-semibold transition hover:bg-white/10">Create an account</button></div></div>
+          <div className="rounded-3xl border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur"><div className="grid grid-cols-2 gap-4"><div className="rounded-2xl bg-white p-5 text-slate-800"><ShoppingBasket className="text-emerald-600" /><p className="mt-6 text-2xl font-bold">9,500+</p><p className="mt-1 text-sm text-slate-500">Everyday products</p></div><div className="rounded-2xl bg-emerald-950/25 p-5"><MapPin className="text-lime-200" /><p className="mt-6 text-2xl font-bold">Easy</p><p className="mt-1 text-sm text-emerald-100">Browse by category</p></div></div><p className="mt-5 text-sm text-emerald-50">Everything you need, from your weekly shop to last-minute essentials.</p></div>
         </div>
-      </motion.div>
+      </section>
 
-      {/* FEATURES */}
-      <div className="mx-auto mt-20 grid max-w-6xl grid-cols-1 gap-6 px-6 md:grid-cols-4 mb-16">
-        {[
-          { icon: "🥦", title: "Fresh Products" },
-          { icon: "🚚", title: "Fast Delivery" },
-          { icon: "💳", title: "Secure Payments" },
-          { icon: "📍", title: "Live Tracking" },
-        ].map((item, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.2 }}
-            className="rounded-2xl bg-white p-6 text-center shadow-lg hover:shadow-xl"
-          >
-            <div className="text-4xl">{item.icon}</div>
-            <h3 className="mt-4 text-lg font-semibold text-gray-800">
-              {item.title}
-            </h3>
-          </motion.div>
-        ))}
-      </div>
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6"><div className="flex items-end justify-between gap-4"><div><p className="text-sm font-semibold text-emerald-700">SHOP BY CATEGORY</p><h2 className="mt-1 text-2xl font-bold tracking-tight">Find what you need</h2></div><button onClick={() => navigate("/shop")} className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">View all</button></div><div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{SHOP_CATEGORIES.slice(1).map((category) => <button key={category.value} onClick={() => navigate(`/shop?category=${encodeURIComponent(category.value)}`)} className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"><span className="text-2xl">{category.icon}</span><span className="mt-5 block text-sm font-semibold text-slate-700 group-hover:text-emerald-700">{category.label}</span></button>)}</div></section>
 
-      {/* BLINKIT-LIKE PRODUCTS SECTION */}
-      <div className="bg-gray-50 py-8">
-        <div className="mx-auto max-w-7xl px-4 md:px-8">
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold text-gray-800">
-              🛒 Popular Products
-            </h3>
-            <p className="text-sm text-gray-500 mt-1">Get fresh items delivered to your door</p>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No products available</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-              {products.map((product) => (
-                <motion.div
-                  key={product._id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all group"
-                >
-                  {/* IMAGE CONTAINER */}
-                  <div
-                    onClick={() => navigate(`/products/${product._id}`)}
-                    className="relative h-32 md:h-40 bg-gray-100 rounded-t-xl overflow-hidden cursor-pointer group"
-                  >
-                    <img
-                      src={product.imageUrl?.[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-md opacity-0 group-hover:opacity-100 transition">
-                      <Heart size={16} className="text-red-500" />
-                    </div>
-                  </div>
-
-                  {/* PRODUCT INFO */}
-                  <div className="p-3 md:p-4">
-                    <h4
-                      onClick={() => navigate(`/products/${product._id}`)}
-                      className="font-semibold text-gray-800 text-sm truncate cursor-pointer hover:text-green-600"
-                    >
-                      {product.name}
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {product.category || "Grocery"}
-                    </p>
-
-                    {/* PRICE & CART */}
-                    <div className="flex items-center justify-between mt-3">
-                      <div>
-                        <p className="font-bold text-gray-900">
-                          {currency}
-                          {product.price}
-                        </p>
-                        {product.originalPrice && (
-                          <p className="text-xs text-gray-400 line-through">
-                            {currency}
-                            {product.originalPrice}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => {
-                          addToCart(product._id);
-                          toast.success("Added to cart!");
-                        }}
-                        className="bg-green-500 hover:bg-green-600 text-white rounded-lg p-2 transition"
-                      >
-                        <ShoppingCart size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* FOOTER */}
-      <footer className="mt-12 bg-green-600 py-6 text-center text-white">
-        © {new Date().getFullYear()} GroceCart. All rights reserved.
-      </footer>
-    </div>
+      <section className="mx-auto max-w-7xl px-4 sm:px-6"><div className="flex items-end justify-between gap-4"><div><p className="text-sm font-semibold text-emerald-700">POPULAR NOW</p><h2 className="mt-1 text-2xl font-bold tracking-tight">Stock up on essentials</h2></div><button onClick={() => navigate("/shop")} className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">Browse shop</button></div>{productsLoading ? <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4"><div className="h-64 animate-pulse rounded-2xl bg-slate-200" /><div className="h-64 animate-pulse rounded-2xl bg-slate-200" /><div className="h-64 animate-pulse rounded-2xl bg-slate-200" /><div className="h-64 animate-pulse rounded-2xl bg-slate-200" /></div> : <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{popularProducts.map((product) => <article key={product._id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"><button onClick={() => navigate(`/products/${product._id}`)} className="flex h-36 w-full items-center justify-center rounded-xl bg-slate-50"><img loading="lazy" src={product.imageUrl?.[0] || fallbackImage} alt={product.name} onError={(event) => { event.currentTarget.src = fallbackImage; }} className="h-full w-full object-contain p-3" /></button><h3 className="mt-3 line-clamp-2 min-h-10 text-sm font-bold text-slate-800">{product.name}</h3><div className="mt-2 flex items-center gap-1 text-xs text-amber-500"><Star size={14} fill="currentColor" /><span className="text-slate-400">4.2</span></div><div className="mt-4 flex items-center justify-between"><strong className="text-lg text-emerald-700">Rs. {product.price}</strong><button onClick={() => addToCart(product._id, "standard")} className="rounded-lg border border-emerald-200 px-3 py-1.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">Add</button></div></article>)}</div>}</section>
+    </main>
   );
 }

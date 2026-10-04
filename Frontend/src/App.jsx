@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import Home from "./pages/Home.jsx";
 import Navbar from "./pages/common/Navbar.jsx";
@@ -36,10 +36,13 @@ const DeliveryHistory = lazy(() => import("./pages/delivery/DeliveryHistory.jsx"
 const Earnings = lazy(() => import("./pages/delivery/Earnings.jsx"));
 
 function App() {
+  const location = useLocation();
+  const isAuthPage = ["/signin", "/signup"].includes(location.pathname);
+
   return (
     <>
-      <Navbar />
-      <CartDrawer />
+      {!isAuthPage && <Navbar />}
+      {!isAuthPage && <CartDrawer />}
 
       <Suspense fallback={<div className="grid min-h-[50vh] place-items-center bg-slate-50 text-sm text-slate-500">Loading page…</div>}>
       <Routes>

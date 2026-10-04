@@ -11,7 +11,7 @@
 
 3. Open `http://localhost`.
 
-The compose stack runs MongoDB, the Express/Socket.IO API, and the Vite frontend served by Nginx. Nginx forwards `/api` and `/socket.io` requests to the backend. MongoDB data is stored in the named `mongo_data` volume.
+The compose stack runs MongoDB, Redis, the Express/Socket.IO API, and the Vite frontend served by Nginx. Nginx forwards `/api` and `/socket.io` requests to the backend. MongoDB and Redis data are stored in named Docker volumes. The public catalogue is cached in Redis for five minutes and invalidated immediately when an admin changes a product.
 
 ## Useful commands
 
@@ -21,4 +21,4 @@ docker compose down
 docker compose down -v # also removes local MongoDB data
 ```
 
-The backend is also exposed at `http://localhost:8000` for direct API debugging.
+The backend is private to the Docker network; use the frontend at `http://localhost`, which proxies API and Socket.IO requests securely.

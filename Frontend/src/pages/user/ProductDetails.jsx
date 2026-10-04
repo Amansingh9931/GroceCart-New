@@ -57,7 +57,7 @@ export default function ProductDetails() {
   return (
     <main className="min-h-screen bg-slate-50 pb-16">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <nav className="mb-8 text-sm text-slate-500"><Link to="/" className="hover:text-emerald-700">Home</Link><span className="px-2">/</span><Link to={`/shop?category=${encodeURIComponent(product.category || "")}`} className="hover:text-emerald-700">Shop</Link><span className="px-2">/</span><span className="capitalize">{product.category || "Groceries"}</span><span className="px-2">/</span><span className="font-medium text-slate-700">{product.name}</span></nav>
+        <nav className="mb-8 text-sm text-slate-500"><Link to={`/shop?category=${encodeURIComponent(product.category || "")}`} className="hover:text-emerald-700">Shop</Link><span className="px-2">/</span><span className="capitalize">{product.category || "Groceries"}</span><span className="px-2">/</span><span className="font-medium text-slate-700">{product.name}</span></nav>
         <section className="grid gap-10 lg:grid-cols-[minmax(360px,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div className="relative flex min-h-[380px] items-center justify-center rounded-3xl bg-slate-100 p-8 sm:min-h-[470px]">
             {discount > 0 && <span className="absolute left-5 top-5 rounded-full bg-rose-500 px-3 py-1.5 text-sm font-bold text-white">{discount}% OFF</span>}

@@ -12,6 +12,7 @@ import UserProductRouter from "./Route/user/UserProductRoute.js";
 import orderRouter from "./Route/user/OrderRoute.js";
 import addressRouter from "./Route/user/AddressRoute.js";
 import deliveryRouter from "./Route/delivery/DeliveryRoute.js";
+import { initializeCache } from "./Services/cacheService.js";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -23,6 +24,7 @@ const corsOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
 
 //connect to database
 await connectDB();
+await initializeCache();
 //setup socket
 setupSocket(server);
 
