@@ -11,9 +11,10 @@ const Signup = () => {
   React.useEffect(() => {
     if (!user) return;
 
-    if (user.role === "admin") navigate("/admin", { replace: true });
-    else if (user.role === "deliveryBoy") navigate("/delivery", { replace: true });
-    else navigate("/user", { replace: true });
+    const r = (user.role || "").toLowerCase();
+    if (r === "admin") navigate("/admin", { replace: true });
+    else if (r === "deliveryboy" || r === "delivery") navigate("/delivery", { replace: true });
+    else navigate("/", { replace: true });
   }, [user, navigate]);
 
   // Pass mode="signup" to Login component

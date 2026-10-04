@@ -67,23 +67,23 @@ export default function DeliveryDashboard() {
 
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* 1. Rider Welcome Header */}
-      <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+      {/* 1. Rider Welcome Header (Clean User-Dashboard Theme) */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
-            <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
-              <Zap size={13} className="fill-emerald-400" />
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
+              <Zap size={13} className="fill-emerald-600 text-emerald-600" />
               10-Minute Instant Dispatch Partner
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
             Ready to roll, {user?.name || "Delivery Partner"}! 🛵
           </h1>
-          <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+          <p className="mt-2 text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">
             Dark stores in your area are dispatching orders now. Pick up packages and complete deliveries to earn instant per-order payouts.
           </p>
         </div>
-        <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
       </div>
 
       {/* 2. Key Metrics Row */}

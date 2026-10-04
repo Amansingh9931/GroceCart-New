@@ -24,17 +24,42 @@ export default function Login({ initialMode = "login" }) {
     setSuccessMessage("");
   }, [initialMode]);
 
-  const getHomeRouteByRole = (role) => {
-    const r = (role || "").toLowerCase();
-    if (r === "admin") return "/admin";
-    if (r === "deliveryboy" || r === "delivery") return "/delivery";
+  const getDestinationRoute = (userObj, fromPath) => {
+    const r = (userObj?.role || "").toLowerCase();
+
+    // 1. DELIVERY AGENT: Strictly navigate to delivery portal only!
+    if (r === "deliveryboy" || r === "delivery") {
+      if (fromPath && fromPath.startsWith("/delivery")) {
+        return fromPath;
+      }
+      return "/delivery";
+    }
+
+    // 2. ADMIN: Navigate to admin console
+    if (r === "admin") {
+      if (fromPath && fromPath.startsWith("/admin")) {
+        return fromPath;
+      }
+      return "/admin";
+    }
+
+    // 3. REGULAR CUSTOMER (USER): Navigate to customer home or shopper path (never /user, /admin, or /delivery)
+    if (
+      fromPath &&
+      fromPath !== "/user" &&
+      !fromPath.startsWith("/admin") &&
+      !fromPath.startsWith("/delivery")
+    ) {
+      return fromPath;
+    }
+
     return "/";
   };
 
   useEffect(() => {
     if (!user) return;
     const from = location.state?.from?.pathname;
-    navigate(from || getHomeRouteByRole(user.role), { replace: true });
+    navigate(getDestinationRoute(user, from), { replace: true });
   }, [user, location.state, navigate]);
 
   const switchMode = (nextMode) => {
@@ -54,7 +79,7 @@ export default function Login({ initialMode = "login" }) {
   const finishLogin = (result) => {
     login(result.user, result.token);
     const from = location.state?.from?.pathname;
-    navigate(from || getHomeRouteByRole(result.user?.role), { replace: true });
+    navigate(getDestinationRoute(result.user, from), { replace: true });
   };
 
   const handleSubmit = async (event) => {

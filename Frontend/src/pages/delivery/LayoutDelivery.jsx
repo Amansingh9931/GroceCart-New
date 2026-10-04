@@ -48,22 +48,22 @@ export default function LayoutDelivery() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col pb-16 md:pb-0">
-      {/* 1. Partner Top Navigation Bar */}
-      <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-sm">
+    <div className="min-h-screen bg-slate-50 flex flex-col pb-16 md:pb-0">
+      {/* 1. Partner Top Navigation Bar (Clean White User-Dashboard Theme) */}
+      <header className="bg-white text-slate-800 border-b border-slate-200 sticky top-0 z-40 shadow-xs">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between py-3">
           {/* Brand & Partner Badge */}
           <div className="flex items-center gap-3">
             <Link to="/delivery" className="flex items-center gap-2.5">
-              <span className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-500 text-slate-950 font-black text-lg shadow-sm shadow-emerald-500/30">
+              <span className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-lg shadow-sm shadow-emerald-600/30">
                 🛵
               </span>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-base tracking-tight text-white">
-                    Groce<span className="text-emerald-400">Cart</span>
+                  <span className="font-extrabold text-base tracking-tight text-slate-900">
+                    Groce<span className="text-emerald-600">Cart</span>
                   </span>
-                  <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
+                  <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
                     FLEET
                   </span>
                 </div>
@@ -85,7 +85,7 @@ export default function LayoutDelivery() {
                     `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                       isActive
                         ? "bg-emerald-600 text-white shadow-xs"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800"
+                        : "text-slate-600 hover:text-emerald-700 hover:bg-emerald-50/70"
                     }`
                   }
                 >
@@ -104,13 +104,13 @@ export default function LayoutDelivery() {
               onClick={handleToggleOnline}
               className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-bold transition shadow-xs ${
                 isOnline
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30"
-                  : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                  : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200"
               }`}
             >
               <span
                 className={`h-2 w-2 rounded-full ${
-                  isOnline ? "bg-emerald-400 animate-ping" : "bg-slate-500"
+                  isOnline ? "bg-emerald-500 animate-ping" : "bg-slate-400"
                 }`}
               />
               <span className="hidden sm:inline">
@@ -123,7 +123,7 @@ export default function LayoutDelivery() {
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-xl border border-slate-700 bg-slate-800 p-2 text-slate-400 hover:text-red-400 hover:border-red-500/40 transition"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition"
               title="Sign out of delivery portal"
             >
               <LogOut size={16} />
@@ -137,8 +137,8 @@ export default function LayoutDelivery() {
         <Outlet />
       </main>
 
-      {/* 3. Mobile Sticky Bottom Navigation (Optimized for Delivery Drivers on Phone) */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-900 border-t border-slate-800 z-50 flex items-center justify-around py-2">
+      {/* 3. Mobile Sticky Bottom Navigation (Clean User-Dashboard Theme) */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-50 flex items-center justify-around py-2 shadow-lg">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -147,8 +147,8 @@ export default function LayoutDelivery() {
               to={item.path}
               end={item.end}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-2 rounded-lg transition ${
-                  isActive ? "text-emerald-400" : "text-slate-400 hover:text-slate-200"
+                `flex flex-col items-center gap-1 text-[10px] font-bold py-1.5 px-2.5 rounded-xl transition ${
+                  isActive ? "text-emerald-700 bg-emerald-50 font-extrabold" : "text-slate-500 hover:text-slate-900"
                 }`
               }
             >
