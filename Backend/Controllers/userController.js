@@ -355,3 +355,61 @@ export const getAdminStats = async (req, res) => {
     });
   }
 };
+
+// FORGOT & RESET PASSWORD (BY EMAIL)
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email, newPassword, password } = req.body;
+    const finalPassword = newPassword || password;
+
+    if (!email || !finalPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and new password are required",
+      });
+    }
+
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address",
+      });
+    }
+
+    if (finalPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 6 characters long",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await UserModel.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "No registered account found with this email",
+      });
+    }
+
+    // Hash the new password with bcrypt
+    const hashedPassword = await bcrypt.hash(finalPassword, 10);
+    user.password = hashedPassword;
+    if (user.authProvider === "google") {
+      user.authProvider = "manual";
+    }
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully! You can now log in with your new password.",
+    });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to reset password. Please try again.",
+    });
+  }
+};

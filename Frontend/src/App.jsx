@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import Home from "./pages/Home.jsx";
 import Navbar from "./pages/common/Navbar.jsx";
 import CartDrawer from "./pages/common/CartDrawer.jsx";
+import Footer from "./pages/common/Footer.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 const Login = lazy(() => import("./pages/Login.jsx"));
@@ -37,7 +38,8 @@ const Earnings = lazy(() => import("./pages/delivery/Earnings.jsx"));
 
 function App() {
   const location = useLocation();
-  const isAuthPage = ["/signin", "/signup"].includes(location.pathname);
+  const isAuthPage = ["/signin", "/signup", "/forgot-password"].includes(location.pathname);
+  const isShopperPage = !isAuthPage && !location.pathname.startsWith("/admin") && !location.pathname.startsWith("/delivery");
 
   return (
     <>
@@ -49,6 +51,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/signin" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<Login initialMode="forgot" />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/products" element={<Products />} />
         <Route path="/shop" element={<Products />} />
@@ -139,6 +142,7 @@ function App() {
         <Route path="/unauthorized" element={<Unauthorized />} />
       </Routes>
       </Suspense>
+      {isShopperPage && <Footer />}
     </>
   );
 }

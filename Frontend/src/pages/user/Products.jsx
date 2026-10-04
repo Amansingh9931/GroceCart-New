@@ -55,17 +55,39 @@ function ProductCard({ product, quantity, onAdd, onUpdate, onOpen }) {
 export default function Products() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { products, productsLoading, productsError, getProductData, cartItems, addToCart, updateQuantity, setCartDrawerOpen, search } = useContext(ShopContext);
+  const {
+    products,
+    productsLoading,
+    productsError,
+    getProductData,
+    cartItems,
+    addToCart,
+    updateQuantity,
+    setCartDrawerOpen,
+    search,
+    getCartCount,
+    getCartAmount,
+    currency,
+  } = useContext(ShopContext);
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState("featured");
   const selectedCategory = searchParams.get("category") || "";
   const categoryName = SHOP_CATEGORIES.find((category) => category.value === selectedCategory)?.label || titleCase(selectedCategory || "All Products");
   // Keep every category visible even while the catalogue is loading or a
   // category currently has no matching products.
   const categories = SHOP_CATEGORIES;
-  const filteredProducts = useMemo(() => products.filter((product) => {
-    const inCategory = !selectedCategory || product.category?.toLowerCase() === selectedCategory;
-    return inCategory && matchesSearch(product, search);
-  }), [products, selectedCategory, search]);
+  const filteredProducts = useMemo(() => {
+    const list = products.filter((product) => {
+      const inCategory = !selectedCategory || product.category?.toLowerCase() === selectedCategory;
+      return inCategory && matchesSearch(product, search);
+    });
+
+    if (sortBy === "price-low") return list.sort((a, b) => a.price - b.price);
+    if (sortBy === "price-high") return list.sort((a, b) => b.price - a.price);
+    if (sortBy === "name") return list.sort((a, b) => a.name.localeCompare(b.name));
+    return list;
+  }, [products, selectedCategory, search, sortBy]);
+
   const pages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
   const visibleProducts = filteredProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -77,14 +99,86 @@ export default function Products() {
   return (
     <main className="min-h-screen bg-slate-50 pb-12 text-slate-800">
       <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6">
-        <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p className="text-sm text-slate-500">Browse groceries <span className="text-emerald-600">/ {categoryName}</span></p><h1 className="mt-2 text-2xl font-bold">{categoryName}</h1></div><button onClick={() => setCartDrawerOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white md:hidden"><ShoppingCart size={17} /> Open cart</button></div>
+        <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <nav className="text-sm text-slate-500" aria-label="Breadcrumb">
+              <button onClick={() => navigate("/")} className="hover:text-emerald-700 font-medium">Home</button>
+              {" / "}
+              <button onClick={() => { setPage(1); setSearchParams({}); }} className={`hover:text-emerald-700 ${!selectedCategory ? "text-emerald-700 font-semibold" : ""}`}>Shop</button>
+              {selectedCategory && (
+                <>
+                  {" / "}
+                  <span className="text-emerald-600 font-semibold">{categoryName}</span>
+                </>
+              )}
+            </nav>
+            <h1 className="mt-2 text-2xl font-bold text-slate-900">{categoryName}</h1>
+          </div>
+          <button onClick={() => setCartDrawerOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white md:hidden">
+            <ShoppingCart size={17} /> Open cart
+          </button>
+        </div>
         <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
           <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-5"><h2 className="flex items-center gap-2 text-lg font-bold"><Filter size={20} /> Category</h2><div className="mt-4 space-y-1">{categories.map((category) => <button key={category.label} onClick={() => selectCategory(category)} className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${selectedCategory === category.value ? "bg-emerald-100 font-medium text-emerald-700" : "text-slate-600 hover:bg-slate-50"}`}>{category.label}</button>)}</div></aside>
-          <section><div className="mb-5 flex items-center justify-between"><p className="text-sm text-slate-600">Showing <strong>{filteredProducts.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredProducts.length)}</strong> of <strong>{filteredProducts.length}</strong> products</p><SlidersHorizontal size={19} className="text-slate-400" /></div>
+          <section>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                Showing <strong>{filteredProducts.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredProducts.length)}</strong> of <strong>{filteredProducts.length}</strong> products
+              </p>
+              <div className="flex items-center gap-2">
+                <label htmlFor="sort-filter" className="text-xs font-semibold text-slate-500 hidden sm:inline">Sort by:</label>
+                <select
+                  id="sort-filter"
+                  value={sortBy}
+                  onChange={(e) => {
+                    setSortBy(e.target.value);
+                    setPage(1);
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-emerald-500 cursor-pointer shadow-xs"
+                >
+                  <option value="featured">Featured</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                  <option value="name">Product Name (A-Z)</option>
+                </select>
+              </div>
+            </div>
             {productsLoading ? <div className="flex justify-center py-20"><div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" /></div> : productsError ? <div className="rounded-2xl bg-red-50 p-5 text-red-700"><p>{productsError}</p><button onClick={getProductData} className="mt-3 rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold">Try again</button></div> : visibleProducts.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-slate-500">No products found. Try a different category or search.</div> : <><div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{visibleProducts.map((product) => { const size = "standard"; const quantity = cartItems?.[product._id]?.[size] || 0; return <ProductCard key={product._id} product={product} quantity={quantity} onAdd={() => addToCart(product._id, size)} onUpdate={(nextQuantity) => updateQuantity(product._id, size, nextQuantity)} onOpen={() => navigate(`/products/${product._id}`)} />; })}</div>{pages > 1 && <div className="mt-8 flex items-center justify-center gap-3"><button disabled={page === 1} onClick={() => setPage((value) => value - 1)} className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40">Previous</button><span className="text-sm text-slate-600">Page {page} of {pages}</span><button disabled={page === pages} onClick={() => setPage((value) => value + 1)} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-40">Next</button></div>}</>}
           </section>
         </div>
       </div>
+
+      {/* Floating Mobile Cart Peek Bar */}
+      {getCartCount && getCartCount() > 0 && (
+        <aside
+          aria-label="Cart summary"
+          className="fixed bottom-4 left-4 right-4 z-40 md:hidden animate-in slide-in-from-bottom duration-300"
+        >
+          <button
+            type="button"
+            onClick={() => setCartDrawerOpen(true)}
+            className="flex w-full items-center justify-between rounded-2xl bg-emerald-700 px-5 py-3.5 text-white shadow-xl shadow-emerald-900/30 active:scale-98 transition"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-800 text-xs font-bold">
+                {getCartCount()}
+              </span>
+              <div className="text-left leading-none">
+                <span className="block text-xs font-semibold text-emerald-100">
+                  {getCartCount() === 1 ? "1 Item" : `${getCartCount()} Items`}
+                </span>
+                <span className="mt-0.5 block text-sm font-extrabold">
+                  {currency || "₹"}{getCartAmount ? getCartAmount() : ""}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-xs font-bold bg-white text-emerald-800 px-3.5 py-1.5 rounded-xl shadow-xs">
+              <span>View Basket</span>
+            </div>
+          </button>
+        </aside>
+      )}
     </main>
   );
 }
