@@ -1,5 +1,5 @@
 // src/context/ShopContext.jsx
-import { createContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../Api/axios.js";
 import { useNavigate } from "react-router-dom";
@@ -24,11 +24,11 @@ const ShopCartProvider = ({ children }) => {
   const cartItemsRef = useRef({});
   const navigate = useNavigate();
 
-  const replaceCartItems = (nextCart) => {
+  const replaceCartItems = useCallback((nextCart) => {
     const safeCart = nextCart && typeof nextCart === "object" ? nextCart : {};
     cartItemsRef.current = safeCart;
     setCartItems(safeCart);
-  };
+  }, []);
 
   // All cart writes go through this helper so rapid clicks never calculate from
   // a stale React render.
@@ -108,7 +108,7 @@ const ShopCartProvider = ({ children }) => {
   };
 
   // GET USER CART FROM BACKEND
-  const getUserCart = async (tokenParam) => {
+  const getUserCart = useCallback(async (tokenParam) => {
     try {
       // console.log("CALLING GET CART WITH TOKEN:", tokenParam);
 
@@ -140,7 +140,7 @@ const ShopCartProvider = ({ children }) => {
         toast.error(err.response?.data?.message || "Failed to load cart");
       }
     }
-  };
+  }, [replaceCartItems]);
 
   // load products once
   useEffect(() => {
@@ -159,7 +159,7 @@ const ShopCartProvider = ({ children }) => {
         console.log("Error parsing stored cart:", err);
       }
     }
-  }, []);
+  }, [token, replaceCartItems]);
 
   // persist guest cart to localStorage when not logged in
   useEffect(() => {
@@ -177,7 +177,7 @@ const ShopCartProvider = ({ children }) => {
     if (token) {
       getUserCart(token);
     }
-  }, [token]);
+  }, [token, getUserCart]);
 
   // when logged in, sync whole cart to DB whenever cartItems change (skip initial load)
   useEffect(() => {

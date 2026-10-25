@@ -46,7 +46,9 @@ export default function Profile() {
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {}
+      } catch {
+        // Ignore malformed locally stored data and use the default address.
+      }
     }
     return [
       {
@@ -75,7 +77,9 @@ export default function Profile() {
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {}
+      } catch {
+        // Ignore malformed locally stored data and use the default prescriptions.
+      }
     }
     return [
       {
@@ -103,12 +107,14 @@ export default function Profile() {
   const [expandedFaq, setExpandedFaq] = useState(0);
 
   // Privacy State
-  const [privacySettings, setPrivacySettings] = useState(() => {
+  const [privacySettings] = useState(() => {
     const saved = localStorage.getItem("grocecart_privacy_settings");
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {}
+      } catch {
+        // Ignore malformed locally stored data and use the default privacy settings.
+      }
     }
     return {
       whatsappUpdates: true,

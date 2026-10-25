@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import { ShopContext } from "../../Context/ShopContext.jsx";
 import axios from "axios";
 import {
@@ -10,17 +10,13 @@ import {
 } from "react-icons/fa";
 
 export default function DeliveryHistory() {
-  const { backend_URL, token, currency } = useContext(ShopContext);
+  const { backend_URL, token } = useContext(ShopContext);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrders, setExpandedOrders] = useState({});
   const [totalEarnings, setTotalEarnings] = useState(0);
 
-  useEffect(() => {
-    fetchDeliveryHistory();
-  }, []);
-
-  const fetchDeliveryHistory = async () => {
+  const fetchDeliveryHistory = useCallback(async () => {
     try {
       const response = await axios.get(`${backend_URL}/api/delivery/history`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -41,7 +37,11 @@ export default function DeliveryHistory() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [backend_URL, token]);
+
+  useEffect(() => {
+    fetchDeliveryHistory();
+  }, [fetchDeliveryHistory]);
 
   const toggleExpandOrder = (orderId) => {
     setExpandedOrders((prev) => ({

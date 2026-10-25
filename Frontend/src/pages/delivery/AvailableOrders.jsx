@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import { ShopContext } from "../../Context/ShopContext.jsx";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -17,13 +17,7 @@ export default function AvailableOrders() {
   const [acceptingId, setAcceptingId] = useState(null);
   const [hasActiveOrder, setHasActiveOrder] = useState(false);
 
-  useEffect(() => {
-    fetchAvailableOrders();
-    const interval = setInterval(fetchAvailableOrders, 5000); // Refresh every 5 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchAvailableOrders = async () => {
+  const fetchAvailableOrders = useCallback(async () => {
     try {
       const url = `${backend_URL}/api/delivery/available-orders`;
       console.log("[AvailableOrders] Fetching from:", url);
@@ -65,7 +59,13 @@ export default function AvailableOrders() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [backend_URL, token]);
+
+  useEffect(() => {
+    fetchAvailableOrders();
+    const interval = setInterval(fetchAvailableOrders, 5000); // Refresh every 5 seconds
+    return () => clearInterval(interval);
+  }, [fetchAvailableOrders]);
 
   const handleAcceptOrder = async (orderId) => {
     try {

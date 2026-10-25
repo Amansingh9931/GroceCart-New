@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../Api/axios.js";
 import { ArrowLeft, Mail, Phone, Calendar, User } from "lucide-react";
@@ -10,11 +10,7 @@ export default function UserDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchUserDetails();
-  }, [userId]);
-
-  const fetchUserDetails = async () => {
+  const fetchUserDetails = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get(`/api/admin/user/${userId}`);
@@ -29,7 +25,11 @@ export default function UserDetails() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    fetchUserDetails();
+  }, [fetchUserDetails]);
 
   if (loading) {
     return (

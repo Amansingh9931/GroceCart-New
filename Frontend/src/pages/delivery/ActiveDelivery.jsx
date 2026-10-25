@@ -1,9 +1,9 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import { ShopContext } from "../../Context/ShopContext.jsx";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { FaPhoneAlt, FaTruck, FaCheckCircle } from "react-icons/fa";
-import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { socket } from "../../utils/socket.js";
@@ -17,6 +17,21 @@ const markerIcon = new L.Icon({
   iconAnchor: [12, 41],
 });
 
+function MapViewport({ deliveryPos, destination }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (deliveryPos && destination) {
+      map.fitBounds([deliveryPos, destination], {
+        padding: [40, 40],
+        maxZoom: 15,
+      });
+    }
+  }, [deliveryPos, destination, map]);
+
+  return null;
+}
+
 export default function ActiveDelivery() {
   const { backend_URL, token } = useContext(ShopContext);
   const navigate = useNavigate();
@@ -29,14 +44,11 @@ export default function ActiveDelivery() {
   const [route, setRoute] = useState([]);
   const [distance, setDistance] = useState("");
   const [eta, setEta] = useState("");
+  const [locationError, setLocationError] = useState("");
+  const [routeError, setRouteError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
-  // ================= FETCH ORDER =================
-  useEffect(() => {
-    fetchActiveDelivery();
-  }, []);
-
-  const fetchActiveDelivery = async () => {
+  const fetchActiveDelivery = useCallback(async () => {
     try {
       const res = await axios.get(
         `${backend_URL}/api/delivery/active-delivery`,
@@ -56,71 +68,120 @@ export default function ActiveDelivery() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [backend_URL, token]);
+
+  // ================= FETCH ORDER =================
+  useEffect(() => {
+    fetchActiveDelivery();
+  }, [fetchActiveDelivery]);
+
+  const fetchRoute = useCallback(async (lat, lng) => {
+    const userLat = order?.addressId?.mapDetails?.latitude;
+    const userLng = order?.addressId?.mapDetails?.longitude;
+    if (!Number.isFinite(Number(userLat)) || !Number.isFinite(Number(userLng))) return;
+    if (!GEO_KEY) {
+      setRoute([]);
+      setDistance("");
+      setEta("");
+      setRouteError("Routing is not configured. Set VITE_GEOAPIFY_KEY in Frontend/.env and restart the frontend.");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `https://api.geoapify.com/v1/routing?waypoints=${lat},${lng}|${Number(userLat)},${Number(userLng)}&mode=drive&apiKey=${GEO_KEY}`
+      );
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(`Geoapify rejected the API key (${res.status})`);
+      }
+      if (!res.ok) throw new Error(`Route request failed (${res.status})`);
+
+      const data = await res.json();
+      const feature = data.features?.[0];
+      const coordinates = feature?.geometry?.coordinates;
+      if (!Array.isArray(coordinates) || coordinates.length === 0) {
+        throw new Error("The routing service returned no route");
+      }
+
+      const lineCoordinates = Array.isArray(coordinates[0]?.[0])
+        ? coordinates[0]
+        : coordinates;
+      const coords = lineCoordinates
+        .filter((coordinate) =>
+          Array.isArray(coordinate) &&
+          Number.isFinite(coordinate[0]) &&
+          Number.isFinite(coordinate[1])
+        )
+        .map(([longitude, latitude]) => [latitude, longitude]);
+
+      if (coords.length === 0) throw new Error("The route contains no valid coordinates");
+      if (!Number.isFinite(feature.properties?.distance) || !Number.isFinite(feature.properties?.time)) {
+        throw new Error("The routing service returned incomplete route details");
+      }
+
+      setRoute(coords);
+      setDistance((feature.properties.distance / 1000).toFixed(2));
+      setEta(Math.round(feature.properties.time / 60) + " mins");
+      setRouteError("");
+    } catch (err) {
+      setRoute([]);
+      setDistance("");
+      setEta("");
+      if (err.message.includes("rejected the API key")) {
+        setRouteError("Geoapify rejected the API key. Check that the key is active, has Routing API access, and allows this site's domain.");
+      } else {
+        console.error("Route error", err);
+        setRouteError("Unable to load the route. Check your network connection and Geoapify configuration, then try again.");
+      }
+    }
+  }, [order]);
 
   // ================= SOCKET TRACKING =================
   useEffect(() => {
     if (!order?._id || deliveryStep !== "out-for-delivery") return;
+    if (!navigator.geolocation) {
+      const message = "Location is not supported by this browser.";
+      setLocationError(message);
+      toast.error(message);
+      return;
+    }
 
     socket.emit("joinOrderRoom", order._id);
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
+        const currentPos = [pos.coords.latitude, pos.coords.longitude];
+        setDeliveryPos(currentPos);
+        setLocationError("");
+        fetchRoute(currentPos[0], currentPos[1]);
         socket.emit("deliveryLocation", {
           orderId: order._id,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
+          lat: currentPos[0],
+          lng: currentPos[1],
         });
       },
-      () => toast.error("GPS error"),
+      (error) => {
+        const message = error.code === error.PERMISSION_DENIED
+          ? "Location permission is blocked. Allow location access in your browser settings."
+          : error.code === error.POSITION_UNAVAILABLE
+            ? "Your current location is unavailable. Check your device's location settings."
+            : "Unable to get your location. Please try again.";
+        setLocationError(message);
+        toast.error(message);
+      },
       { enableHighAccuracy: true }
     );
 
-    socket.on("locationUpdate", ({ lat, lng }) => {
-      setDeliveryPos([lat, lng]);
-      fetchRoute(lat, lng);
-    });
-
     socket.on("trackingStopped", () => {
-      socket.off("locationUpdate");
+      navigator.geolocation.clearWatch(watchId);
     });
 
     return () => {
       navigator.geolocation.clearWatch(watchId);
       socket.emit("stopTracking", order._id);
-      socket.off("locationUpdate");
       socket.off("trackingStopped");
     };
-  }, [order, deliveryStep]);
-
-  // ================= ROUTE API =================
-  const fetchRoute = async (lat, lng) => {
-    const userLat = order.addressId?.mapDetails?.latitude;
-    const userLng = order.addressId?.mapDetails?.longitude;
-    if (!userLat || !userLng) return;
-
-    try {
-      const res = await fetch(
-        `https://api.geoapify.com/v1/routing?waypoints=${lat},${lng}|${userLat},${userLng}&mode=drive&apiKey=${GEO_KEY}`
-      );
-      const data = await res.json();
-
-      if (!data.features?.length) return;
-
-      const feature = data.features[0];
-
-      const coords = feature.geometry.coordinates[0].map((c) => [
-        c[1],
-        c[0],
-      ]);
-
-      setRoute(coords);
-      setDistance((feature.properties.distance / 1000).toFixed(2));
-      setEta(Math.round(feature.properties.time / 60) + " mins");
-    } catch (err) {
-      console.log("Route error", err);
-    }
-  };
+  }, [order, deliveryStep, fetchRoute]);
 
   // ================= ACTIONS =================
   const handleMarkOutForDelivery = async () => {
@@ -186,6 +247,9 @@ export default function ActiveDelivery() {
 
   const userLat = order.addressId?.mapDetails?.latitude;
   const userLng = order.addressId?.mapDetails?.longitude;
+  const destination = Number.isFinite(Number(userLat)) && Number.isFinite(Number(userLng))
+    ? [Number(userLat), Number(userLng)]
+    : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-6">
@@ -206,15 +270,16 @@ export default function ActiveDelivery() {
         <div className="bg-white rounded-xl shadow p-4">
           <h3 className="font-semibold mb-2">📍 Live Route</h3>
 
-          {userLat && userLng ? (
+          {destination ? (
             <MapContainer
-              center={deliveryPos || [userLat, userLng]}
+              center={deliveryPos || destination}
               zoom={14}
               style={{ height: "350px", borderRadius: "12px" }}
             >
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <MapViewport deliveryPos={deliveryPos} destination={destination} />
               {deliveryPos && <Marker position={deliveryPos} icon={markerIcon} />}
-              <Marker position={[userLat, userLng]} icon={markerIcon} />
+              <Marker position={destination} icon={markerIcon} />
               {route.length > 0 && <Polyline positions={route} />}
             </MapContainer>
           ) : (
@@ -226,6 +291,17 @@ export default function ActiveDelivery() {
               <p>📏 Distance: {distance} km</p>
               <p>⏱ ETA: {eta}</p>
             </div>
+          )}
+          {deliveryStep === "out-for-delivery" && !deliveryPos && !locationError && (
+            <p className="mt-3 text-center text-sm text-gray-500">
+              Waiting for GPS location. Allow location access when prompted.
+            </p>
+          )}
+          {locationError && (
+            <p className="mt-3 text-center text-sm text-red-600">{locationError}</p>
+          )}
+          {routeError && (
+            <p className="mt-3 text-center text-sm text-red-600">{routeError}</p>
           )}
         </div>
 

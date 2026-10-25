@@ -1,9 +1,19 @@
 import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { socket } from "../socket";
 
 const GEO_KEY = import.meta.env.VITE_GEOAPIFY_KEY;
+
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
 
 export default function DeliveryMap({ order }) {
   const userLat = order.address.mapDetails.latitude;
@@ -14,6 +24,28 @@ export default function DeliveryMap({ order }) {
   const [distance, setDistance] = useState(0);
   const [eta, setEta] = useState("");
   const [reached, setReached] = useState(false);
+
+  const checkReached = useCallback((lat, lng) => {
+    const dist = getDistance(lat, lng, userLat, userLng);
+    if (dist < 0.05) {
+      setReached(true);
+      socket.emit("stopTracking", order._id);
+    }
+  }, [order._id, userLat, userLng]);
+
+  const fetchRoute = useCallback(async (lat, lng) => {
+    const res = await fetch(
+      `https://api.geoapify.com/v1/routing?waypoints=${lat},${lng}|${userLat},${userLng}&mode=drive&apiKey=${GEO_KEY}`
+    );
+    const data = await res.json();
+
+    const feature = data.features[0];
+    const coords = feature.geometry.coordinates[0].map(c => [c[1], c[0]]);
+    setRoute(coords);
+
+    setDistance((feature.properties.distance / 1000).toFixed(2));
+    setEta(Math.round(feature.properties.time / 60) + " mins");
+  }, [userLat, userLng]);
 
   useEffect(() => {
     socket.emit("joinOrderRoom", order._id);
@@ -29,40 +61,7 @@ export default function DeliveryMap({ order }) {
       socket.emit("stopTracking", order._id);
       socket.off("locationUpdate");
     };
-  }, []);
-
-  const fetchRoute = async (lat, lng) => {
-    const res = await fetch(
-      `https://api.geoapify.com/v1/routing?waypoints=${lat},${lng}|${userLat},${userLng}&mode=drive&apiKey=${GEO_KEY}`
-    );
-    const data = await res.json();
-
-    const feature = data.features[0];
-    const coords = feature.geometry.coordinates[0].map(c => [c[1], c[0]]);
-    setRoute(coords);
-
-    setDistance((feature.properties.distance / 1000).toFixed(2));
-    setEta(Math.round(feature.properties.time / 60) + " mins");
-  };
-
-  const checkReached = (lat, lng) => {
-    const dist = getDistance(lat, lng, userLat, userLng);
-    if (dist < 0.05) {
-      setReached(true);
-      socket.emit("stopTracking", order._id);
-    }
-  };
-
-  const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI/180;
-    const dLon = (lon2 - lon1) * Math.PI/180;
-    const a =
-      Math.sin(dLat/2)*Math.sin(dLat/2) +
-      Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
-      Math.sin(dLon/2)*Math.sin(dLon/2);
-    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-  };
+  }, [checkReached, fetchRoute, order._id]);
 
   return (
     <div>

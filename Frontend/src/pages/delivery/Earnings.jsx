@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import { ShopContext } from "../../Context/ShopContext.jsx";
 import axios from "axios";
 import { FaRupeeSign, FaTruck, FaChartLine, FaWallet } from "react-icons/fa";
@@ -8,11 +8,7 @@ export default function Earnings() {
   const [earnings, setEarnings] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchEarnings();
-  }, []);
-
-  const fetchEarnings = async () => {
+  const fetchEarnings = useCallback(async () => {
     try {
       const response = await axios.get(`${backend_URL}/api/delivery/earnings`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -26,7 +22,11 @@ export default function Earnings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [backend_URL, token]);
+
+  useEffect(() => {
+    fetchEarnings();
+  }, [fetchEarnings]);
 
   if (loading) {
     return (

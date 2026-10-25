@@ -13,14 +13,9 @@ const CartTotal = () => {
   const [animatedSubtotal, setAnimatedSubtotal] = useState(0);
   const [animatedTotal, setAnimatedTotal] = useState(0);
 
-  useEffect(() => {
-    animateValue(cartAmount, setAnimatedSubtotal);
-    animateValue(finalTotal, setAnimatedTotal);
-  }, [cartAmount, finalTotal]);
-
-  const animateValue = (value, setter) => {
-    let start = 0;
-    let duration = 300;
+  function animateValue(value, setter) {
+    const start = 0;
+    const duration = 300;
     let startTime = null;
 
     const animate = (time) => {
@@ -31,7 +26,12 @@ const CartTotal = () => {
     };
 
     requestAnimationFrame(animate);
-  };
+  }
+
+  useEffect(() => {
+    animateValue(cartAmount, setAnimatedSubtotal);
+    animateValue(finalTotal, setAnimatedTotal);
+  }, [cartAmount, finalTotal]);
 
   return (
     <div>

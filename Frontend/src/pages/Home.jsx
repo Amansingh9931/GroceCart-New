@@ -1,4 +1,4 @@
-import { useContext, useMemo, useRef, useState, useEffect } from "react";
+import { useContext, useRef, useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   ChevronLeft,
@@ -369,7 +369,7 @@ export default function Home() {
   };
 
   // Filter curated products for sections
-  const smartBasketProducts = useMemo(() => {
+  const smartBasketProducts = (() => {
     if (!products.length) return [];
     // Prioritize staples: carrot, coriander, tomato, potato, milk, bread, eggs, butter
     const priorityKeywords = /carrot|coriander|tomato|potato|peas|milk|bread|egg|butter|onion/i;
@@ -378,22 +378,22 @@ export default function Home() {
       return prioritized.slice(0, 16);
     }
     return products.slice(0, 16);
-  }, [products]);
+  })();
 
-  const dealsProducts = useMemo(() => {
+  const dealsProducts = (() => {
     if (!products.length) return [];
     // Grab grocery staples & snacks for deals
     return products
       .filter((p) => p.category === "foodgrains oil masala" || p.category === "snacks branded foods")
       .slice(0, 14);
-  }, [products]);
+  })();
 
-  const freshProduceProducts = useMemo(() => {
+  const freshProduceProducts = (() => {
     if (!products.length) return [];
     return products
       .filter((p) => p.category === "fruits vegetables")
       .slice(0, 14);
-  }, [products]);
+  })();
 
   // Scroll helper
   const handleScroll = (ref, direction) => {

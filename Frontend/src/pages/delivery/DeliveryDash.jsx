@@ -24,13 +24,8 @@ export default function DeliveryDashboard() {
     deliveredToday: 0,
     todayEarnings: 0,
   });
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDeliveryMetrics();
-  }, []);
-
-  const fetchDeliveryMetrics = async () => {
+  async function fetchDeliveryMetrics() {
     try {
       // 1. Fetch available orders
       const availRes = await api.get("/api/delivery/available-orders");
@@ -41,7 +36,9 @@ export default function DeliveryDashboard() {
       try {
         const activeRes = await api.get("/api/delivery/active-delivery");
         if (activeRes.data?.order) active = 1;
-      } catch (e) {}
+      } catch {
+        // A missing active delivery is an expected state.
+      }
 
       // 3. Fetch earnings & history
       let earnings = 0;
@@ -50,7 +47,9 @@ export default function DeliveryDashboard() {
         const earnRes = await api.get("/api/delivery/earnings");
         earnings = earnRes.data?.totalEarnings || 0;
         delivered = earnRes.data?.completedOrdersCount || 0;
-      } catch (e) {}
+      } catch {
+        // Earnings can be temporarily unavailable; retain the zero defaults.
+      }
 
       setStats({
         availableCount: available,
@@ -60,10 +59,14 @@ export default function DeliveryDashboard() {
       });
     } catch (err) {
       console.error("Delivery metrics fetch error:", err);
-    } finally {
-      setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void fetchDeliveryMetrics();
+    });
+  }, []);
 
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8 space-y-6">

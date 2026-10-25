@@ -1,5 +1,5 @@
-import React, { useContext, useEffect, useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useContext, useEffect, useState, useMemo, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { ShopContext } from "../../Context/ShopContext.jsx";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -24,10 +24,15 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+const normalizeOrderStatus = (status) => String(status || "").trim().toLowerCase();
+const isDelivered = (status) => normalizeOrderStatus(status) === "delivered";
+const isCancelled = (status) => normalizeOrderStatus(status) === "cancelled";
+const isOutForDelivery = (status) =>
+  ["out for delivery", "in transit", "on the way"].includes(normalizeOrderStatus(status));
+
 export default function Orders() {
   const { backend_URL, token, currency, addToCart, setCartDrawerOpen } =
     useContext(ShopContext);
-  const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,11 +40,7 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "active", "delivered", "cancelled"
   const [expandedOrders, setExpandedOrders] = useState({});
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${backend_URL}/api/order/me`, {
@@ -63,7 +64,11 @@ export default function Orders() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [backend_URL, token]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const toggleExpand = (orderId) => {
     setExpandedOrders((prev) => ({
@@ -219,13 +224,12 @@ export default function Orders() {
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       // 1. Status Filter
-      const st = (order.status || "").toLowerCase();
       if (statusFilter === "active") {
-        if (st === "delivered" || st === "cancelled") return false;
+        if (!isOutForDelivery(order.status)) return false;
       } else if (statusFilter === "delivered") {
-        if (st !== "delivered") return false;
+        if (!isDelivered(order.status)) return false;
       } else if (statusFilter === "cancelled") {
-        if (st !== "cancelled") return false;
+        if (!isCancelled(order.status)) return false;
       }
 
       // 2. Search Query
@@ -244,8 +248,8 @@ export default function Orders() {
 
   // Status helper mapping
   const getStatusBadge = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s.includes("deliver")) {
+    const s = normalizeOrderStatus(status);
+    if (isDelivered(s)) {
       return {
         label: "Delivered",
         color: "bg-emerald-50 text-emerald-800 border-emerald-200",
@@ -253,7 +257,15 @@ export default function Orders() {
         dot: "bg-emerald-500",
       };
     }
-    if (s.includes("transit") || s.includes("out") || s.includes("way")) {
+    if (isCancelled(s)) {
+      return {
+        label: "Cancelled",
+        color: "bg-red-50 text-red-800 border-red-200",
+        icon: Package,
+        dot: "bg-red-500",
+      };
+    }
+    if (isOutForDelivery(s)) {
       return {
         label: "Out for Delivery",
         color: "bg-amber-50 text-amber-800 border-amber-200",
@@ -261,7 +273,7 @@ export default function Orders() {
         dot: "bg-amber-500 animate-pulse",
       };
     }
-    if (s.includes("confirm") || s.includes("pack")) {
+    if (s === "accepted" || s.includes("confirm") || s.includes("pack")) {
       return {
         label: "Packing & Confirmed",
         color: "bg-blue-50 text-blue-800 border-blue-200",
@@ -278,10 +290,10 @@ export default function Orders() {
   };
 
   const getStepProgress = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s.includes("deliver")) return 4;
-    if (s.includes("out") || s.includes("way")) return 3;
-    if (s.includes("confirm") || s.includes("pack")) return 2;
+    const s = normalizeOrderStatus(status);
+    if (isDelivered(s)) return 4;
+    if (isOutForDelivery(s)) return 3;
+    if (s === "accepted" || s.includes("confirm") || s.includes("pack")) return 2;
     return 1;
   };
 
@@ -324,18 +336,12 @@ export default function Orders() {
               {
                 id: "active",
                 label: "In Transit",
-                count: orders.filter(
-                  (o) =>
-                    !o.status?.toLowerCase().includes("deliver") &&
-                    !o.status?.toLowerCase().includes("cancel")
-                ).length,
+                count: orders.filter((o) => isOutForDelivery(o.status)).length,
               },
               {
                 id: "delivered",
                 label: "Delivered",
-                count: orders.filter((o) =>
-                  o.status?.toLowerCase().includes("deliver")
-                ).length,
+                count: orders.filter((o) => isDelivered(o.status)).length,
               },
             ].map((tab) => (
               <button
@@ -489,7 +495,7 @@ export default function Orders() {
                         {currency}{order.amount}
                       </div>
                       <p className="text-[11px] font-medium text-slate-400">
-                        {order.items?.length || 1} {order.items?.length === 1 ? "item" : "items"} · {order.paymentMethod || "COD"}
+                        {order.items?.length || 0} {order.items?.length === 1 ? "item" : "items"} · {order.paymentMethod || "COD"}
                       </p>
                     </div>
                   </div>
@@ -566,47 +572,66 @@ export default function Orders() {
 
                   {/* Items Preview */}
                   <div className="p-5 sm:p-6 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {(isExpanded ? order.items : order.items?.slice(0, 3) || []).map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-2.5"
-                        >
-                          <img
-                            src={item.image || item.imageUrl?.[0]}
-                            alt={item.name}
-                            className="h-12 w-12 rounded-xl object-contain bg-white p-1 border border-slate-100 shrink-0"
-                            onError={(e) => {
-                              e.currentTarget.src =
-                                "https://images.unsplash.com/photo-1542838132-92c53300491e?w=80";
-                            }}
-                          />
-                          <div className="min-w-0 flex-1 text-xs">
-                            <p className="font-bold text-slate-800 truncate">{item.name}</p>
-                            <p className="text-[11px] text-slate-400">
-                              Qty: {item.quantity} · {item.size || "1 pack"}
-                            </p>
-                            <p className="font-extrabold text-emerald-700 mt-0.5">
-                              {currency}{item.price * item.quantity}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    {order.items?.length ? (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {(isExpanded ? order.items : order.items.slice(0, 3)).map((item, idx) => {
+                            const itemName = item.name || item.productName || "Order item";
+                            const image = item.image || item.imageUrl?.[0];
+                            const quantity = Number(item.quantity) || 1;
+                            const price = Number(item.price);
 
-                    {order.items?.length > 3 && (
-                      <button
-                        type="button"
-                        onClick={() => toggleExpand(order._id)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline pt-1"
-                      >
-                        <span>
-                          {isExpanded
-                            ? "Show fewer items"
-                            : `+ View ${order.items.length - 3} more items`}
-                        </span>
-                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      </button>
+                            return (
+                              <div
+                                key={item._id || item.id || idx}
+                                className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-2.5"
+                              >
+                                {image && (
+                                  <img
+                                    src={image}
+                                    alt={itemName}
+                                    className="h-12 w-12 rounded-xl object-contain bg-white p-1 border border-slate-100 shrink-0"
+                                    onError={(e) => {
+                                      e.currentTarget.src =
+                                        "https://images.unsplash.com/photo-1542838132-92c53300491e?w=80";
+                                    }}
+                                  />
+                                )}
+                                <div className="min-w-0 flex-1 text-xs">
+                                  <p className="font-bold text-slate-800 truncate">{itemName}</p>
+                                  <p className="text-[11px] text-slate-400">
+                                    Qty: {quantity} · {item.size || "1 pack"}
+                                  </p>
+                                  {Number.isFinite(price) && (
+                                    <p className="font-extrabold text-emerald-700 mt-0.5">
+                                      {currency}{price * quantity}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {order.items.length > 3 && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(order._id)}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline pt-1"
+                          >
+                            <span>
+                              {isExpanded
+                                ? "Show fewer items"
+                                : `+ View ${order.items.length - 3} more items`}
+                            </span>
+                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-slate-500">
+                        Item details are not available for this order.
+                      </p>
                     )}
                   </div>
 

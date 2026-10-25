@@ -21,7 +21,6 @@ import {
 
 export default function AdminDash() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -53,7 +52,7 @@ export default function AdminDash() {
       }
 
       // 3. Fetch Products for Stock Monitoring
-      const productsRes = await api.get("/api/products");
+      const productsRes = await api.get("/api/products/list");
       if (productsRes.data?.products) {
         const productsList = productsRes.data.products;
         const low = productsList.filter(
@@ -64,7 +63,6 @@ export default function AdminDash() {
     } catch (err) {
       console.error("Dashboard data load error:", err);
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };

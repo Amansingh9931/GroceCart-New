@@ -23,14 +23,11 @@ import {
   Mail,
 } from "lucide-react";
 import { toast } from "react-toastify";
-import api from "../../Api/axios.js";
 
 export default function AccountFeatureModals({
   activeModal,
   onClose,
   user,
-  token,
-  login,
 }) {
   // 1. Saved Addresses State
   const [addresses, setAddresses] = useState(() => {
@@ -38,8 +35,8 @@ export default function AccountFeatureModals({
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {
-        // fallback
+      } catch {
+        // Ignore malformed locally stored data and use the default address.
       }
     }
     return [
@@ -70,7 +67,9 @@ export default function AccountFeatureModals({
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {}
+      } catch {
+        // Ignore malformed locally stored data and use the default prescriptions.
+      }
     }
     return [
       {
@@ -112,7 +111,9 @@ export default function AccountFeatureModals({
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {}
+      } catch {
+        // Ignore malformed locally stored data and use the default privacy settings.
+      }
     }
     return {
       whatsappUpdates: true,

@@ -74,6 +74,10 @@ Update the placeholder values before running the app.
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `VITE_GEOAPIFY_KEY` | Geoapify key used by map-related views |
 
+The Geoapify key must be active and have Routing API access enabled. If using
+domain restrictions, allow the frontend's development and production origins.
+Restart the frontend dev server or rebuild after changing this variable.
+
 ## Run locally
 
 Install dependencies in each application directory:

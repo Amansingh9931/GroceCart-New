@@ -16,7 +16,7 @@ import {
 import { toast } from "react-toastify";
 
 export default function LayoutDelivery() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(() => {
     return localStorage.getItem("grocecart_delivery_online") !== "false";

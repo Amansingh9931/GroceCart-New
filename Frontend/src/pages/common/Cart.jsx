@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useMemo } from "react";
 import { ShopContext } from "../../Context/ShopContext.jsx";
 import Title from "../common/Title.jsx";
 import CartTotal from "../common/CartTotal";
@@ -7,32 +7,30 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
 
 const Cart = () => {
+  const Motion = motion;
   const navigate = useNavigate();
   const { products, currency, cartItems, updateQuantity } =
     useContext(ShopContext);
 
-  const [cartData, setCartData] = useState([]);
-
-  useEffect(() => {
-    if (products.length > 0) {
-      const temp = [];
-      for (const productId in cartItems) {
-        for (const size in cartItems[productId]) {
-          const qty = cartItems[productId][size];
-          if (qty > 0) {
-            temp.push({ _id: productId, size, quantity: qty });
-          }
+  const cartData = useMemo(() => {
+    if (!products.length) return [];
+    const temp = [];
+    for (const productId in cartItems) {
+      for (const size in cartItems[productId]) {
+        const qty = cartItems[productId][size];
+        if (qty > 0) {
+          temp.push({ _id: productId, size, quantity: qty });
         }
       }
-      setCartData(temp);
     }
+    return temp;
   }, [cartItems, products]);
 
   /* ================= EMPTY CART ================= */
   if (cartData.length === 0) {
     return (
       <div className="min-h-[75vh] flex flex-col items-center justify-center text-center px-4">
-        <motion.div
+        <Motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5 }}
@@ -50,7 +48,7 @@ const Cart = () => {
           >
             Start Shopping
           </button>
-        </motion.div>
+        </Motion.div>
       </div>
     );
   }
@@ -70,7 +68,7 @@ const Cart = () => {
               if (!product) return null;
 
               return (
-                <motion.div
+                <Motion.div
                   key={`${item._id}-${item.size}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -105,7 +103,7 @@ const Cart = () => {
                   {/* ACTIONS */}
                   <div className="flex items-center gap-5">
                     {/* QUANTITY */}
-                    <motion.div
+                    <Motion.div
                       whileTap={{ scale: 0.95 }}
                       className="flex items-center bg-gray-100 rounded-xl overflow-hidden"
                     >
@@ -122,14 +120,14 @@ const Cart = () => {
                         <Minus size={16} />
                       </button>
 
-                      <motion.span
+                      <Motion.span
                         key={item.quantity}
                         initial={{ scale: 0.7 }}
                         animate={{ scale: 1 }}
                         className="px-4 font-semibold"
                       >
                         {item.quantity}
-                      </motion.span>
+                      </Motion.span>
 
                       <button
                         onClick={() =>
@@ -143,10 +141,10 @@ const Cart = () => {
                       >
                         <Plus size={16} />
                       </button>
-                    </motion.div>
+                    </Motion.div>
 
                     {/* REMOVE */}
-                    <motion.button
+                    <Motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() =>
@@ -155,16 +153,16 @@ const Cart = () => {
                       className="text-red-500 hover:text-red-600"
                     >
                       <Trash2 size={18} />
-                    </motion.button>
+                    </Motion.button>
                   </div>
-                </motion.div>
+                </Motion.div>
               );
             })}
           </AnimatePresence>
         </div>
 
         {/* ================= SUMMARY ================= */}
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -173,20 +171,20 @@ const Cart = () => {
           <div className="bg-white rounded-2xl shadow-xl p-6">
             <CartTotal />
 
-            <motion.button
+            <Motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => navigate("/place-order")}
               className="w-full bg-green-600 text-white py-4 mt-6 rounded-xl font-semibold hover:bg-green-700 transition"
             >
               Proceed to Checkout
-            </motion.button>
+            </Motion.button>
 
             <p className="text-xs text-gray-500 mt-4 text-center">
               🚚 Free delivery on orders above ₹499
             </p>
           </div>
-        </motion.div>
+        </Motion.div>
       </div>
     </div>
   );

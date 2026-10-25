@@ -3,12 +3,6 @@ import { useAuth } from "../../Context/AuthContext.jsx";
 import { useContext } from "react";
 import { ShopContext } from "../../Context/ShopContext.jsx";
 import { assets } from "../../assets/frontend_assets/assets.js";
-import {
-  FaShoppingCart,
-  FaHeart,
-  FaUserCircle,
-  FaListAlt,
-} from "react-icons/fa";
 
 const UserDashboard = () => {
   const { user } = useAuth();
@@ -22,16 +16,6 @@ const UserDashboard = () => {
   } = useContext(ShopContext);
   const size = "standard";
 
-  const stats = {
-    orders: 5,
-    cart: 3,
-    wishlist: 2,
-  };
-
-  const recentOrders = [
-    { id: "ORD123", status: "Delivered", amount: 560 },
-    { id: "ORD124", status: "Out for delivery", amount: 320 },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
