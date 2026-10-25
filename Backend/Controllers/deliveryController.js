@@ -2,6 +2,7 @@ import orderModel from "../Models/OrderModel.js";
 import userModel from "../Models/UserModel.js";
 import AddressModel from "../Models/AddressModel.js";
 import productModel from "../Models/ProductModel.js";
+import { emitOrderStatusUpdate } from "../socketServer.js";
 
 // GET ALL AVAILABLE ORDERS (delivery pool)
 const getAvailableOrders = async (req, res) => {
@@ -135,6 +136,7 @@ const acceptOrder = async (req, res) => {
     order.status = "Accepted";
     order.acceptedAt = new Date();
     await order.save();
+    emitOrderStatusUpdate(order._id, order.status);
 
     console.log("[AcceptOrder] ✅ Order accepted successfully:", { orderId, agentName: order.deliveryAgentName });
 
@@ -225,6 +227,7 @@ const markOutForDelivery = async (req, res) => {
 
     order.status = "Out for Delivery";
     await order.save();
+    emitOrderStatusUpdate(order._id, order.status);
 
     res.json({
       success: true,
@@ -255,6 +258,7 @@ const markDelivered = async (req, res) => {
     order.deliveredAt = new Date();
     order.commission = commission;
     await order.save();
+    emitOrderStatusUpdate(order._id, order.status);
 
     // Add earnings to delivery agent
     const agent = await userModel.findById(deliveryAgentId);

@@ -29,9 +29,8 @@ export default function DeliveryMap({ order }) {
     const dist = getDistance(lat, lng, userLat, userLng);
     if (dist < 0.05) {
       setReached(true);
-      socket.emit("stopTracking", order._id);
     }
-  }, [order._id, userLat, userLng]);
+  }, [userLat, userLng]);
 
   const fetchRoute = useCallback(async (lat, lng) => {
     const res = await fetch(
@@ -50,16 +49,17 @@ export default function DeliveryMap({ order }) {
   useEffect(() => {
     socket.emit("joinOrderRoom", order._id);
 
-    socket.on("locationUpdate", async (data) => {
+    const handleLocationUpdate = async (data) => {
       const { lat, lng } = data;
       setDeliveryPos([lat, lng]);
       await fetchRoute(lat, lng);
       checkReached(lat, lng);
-    });
+    };
+    socket.on("locationUpdate", handleLocationUpdate);
 
     return () => {
-      socket.emit("stopTracking", order._id);
-      socket.off("locationUpdate");
+      socket.emit("leaveOrderRoom", order._id);
+      socket.off("locationUpdate", handleLocationUpdate);
     };
   }, [checkReached, fetchRoute, order._id]);
 

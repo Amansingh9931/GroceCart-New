@@ -1,8 +1,11 @@
 import React, { useContext, useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { CircleMarker, MapContainer, TileLayer, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import { ShopContext } from "../../Context/ShopContext.jsx";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { socket } from "../../utils/socket.js";
 import {
   Package,
   MapPin,
@@ -29,6 +32,120 @@ const isDelivered = (status) => normalizeOrderStatus(status) === "delivered";
 const isCancelled = (status) => normalizeOrderStatus(status) === "cancelled";
 const isOutForDelivery = (status) =>
   ["out for delivery", "in transit", "on the way"].includes(normalizeOrderStatus(status));
+
+function TrackingMapViewport({ deliveryPosition, destination }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (deliveryPosition) {
+      map.fitBounds([deliveryPosition, destination], {
+        padding: [36, 36],
+        maxZoom: 15,
+      });
+    }
+  }, [deliveryPosition, destination, map]);
+
+  return null;
+}
+
+function OrderLiveTracking({ orderId, status, destination, onStatusChange }) {
+  const [deliveryPosition, setDeliveryPosition] = useState(null);
+
+  useEffect(() => {
+    const handleLocationUpdate = ({ orderId: updateOrderId, lat, lng }) => {
+      if (updateOrderId && updateOrderId !== orderId) return;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      setDeliveryPosition([lat, lng]);
+    };
+    const handleOrderStatusUpdate = ({ orderId: updateOrderId, status: nextStatus }) => {
+      if (updateOrderId === orderId && nextStatus) {
+        onStatusChange(orderId, nextStatus);
+      }
+    };
+    const handleTrackingStopped = ({ orderId: stoppedOrderId } = {}) => {
+      if (!stoppedOrderId || stoppedOrderId === orderId) {
+        onStatusChange(orderId, "Delivered");
+      }
+    };
+
+    socket.on("locationUpdate", handleLocationUpdate);
+    socket.on("orderStatusUpdate", handleOrderStatusUpdate);
+    socket.on("trackingStopped", handleTrackingStopped);
+    socket.emit("joinOrderRoom", orderId);
+
+    return () => {
+      socket.off("locationUpdate", handleLocationUpdate);
+      socket.off("orderStatusUpdate", handleOrderStatusUpdate);
+      socket.off("trackingStopped", handleTrackingStopped);
+      socket.emit("leaveOrderRoom", orderId);
+    };
+  }, [onStatusChange, orderId]);
+
+  if (!isOutForDelivery(status)) return null;
+
+  return (
+    <section className="border-t border-slate-100 bg-white p-5 sm:p-6">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="font-bold text-slate-900">Live delivery tracking</h3>
+          <p className="text-xs text-slate-500">
+            {deliveryPosition
+              ? "Showing the delivery partner's latest location."
+              : "Waiting for the delivery partner's GPS location."}
+          </p>
+        </div>
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+          Live
+        </span>
+      </div>
+      {destination ? (
+        <>
+          <MapContainer
+            center={destination}
+            zoom={14}
+            scrollWheelZoom={false}
+            style={{ height: "320px", borderRadius: "12px" }}
+          >
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <TrackingMapViewport
+              deliveryPosition={deliveryPosition}
+              destination={destination}
+            />
+            <CircleMarker
+              center={destination}
+              radius={9}
+              pathOptions={{ color: "#047857", fillColor: "#10b981", fillOpacity: 1 }}
+            />
+            {deliveryPosition && (
+              <CircleMarker
+                center={deliveryPosition}
+                radius={9}
+                pathOptions={{ color: "#1d4ed8", fillColor: "#3b82f6", fillOpacity: 1 }}
+              />
+            )}
+          </MapContainer>
+          {deliveryPosition && (
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-600">
+              <span className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                Delivery partner
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                Delivery address
+              </span>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="text-sm text-amber-700">
+          Live tracking is unavailable because this delivery address has no saved map location.
+        </p>
+      )}
+    </section>
+  );
+}
 
 export default function Orders() {
   const { backend_URL, token, currency, addToCart, setCartDrawerOpen } =
@@ -69,6 +186,14 @@ export default function Orders() {
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  const updateOrderStatus = useCallback((orderId, status) => {
+    setOrders((currentOrders) =>
+      currentOrders.map((order) =>
+        order._id === orderId ? { ...order, status } : order
+      )
+    );
+  }, []);
 
   const toggleExpand = (orderId) => {
     setExpandedOrders((prev) => ({
@@ -437,6 +562,15 @@ export default function Orders() {
               const BadgeIcon = badge.icon;
               const step = getStepProgress(order.status);
               const isExpanded = !!expandedOrders[order._id];
+              const mapDetails = order.addressId?.mapDetails || order.address?.mapDetails;
+              const hasDestination =
+                mapDetails?.latitude != null &&
+                mapDetails?.longitude != null &&
+                Number.isFinite(Number(mapDetails.latitude)) &&
+                Number.isFinite(Number(mapDetails.longitude));
+              const destination = hasDestination
+                ? [Number(mapDetails.latitude), Number(mapDetails.longitude)]
+                : null;
               const dateObj = new Date(order.date || order.createdAt || Date.now());
               const dateString = dateObj.toLocaleDateString("en-IN", {
                 day: "numeric",
@@ -569,6 +703,21 @@ export default function Orders() {
                       </div>
                     </div>
                   </div>
+
+                  {!isDelivered(order.status) && !isCancelled(order.status) && (
+                    <OrderLiveTracking
+                      orderId={order._id}
+                      status={order.status}
+                      destination={destination}
+                      onStatusChange={updateOrderStatus}
+                    />
+                  )}
+                  {isDelivered(order.status) && (
+                    <p className="flex items-center gap-2 border-t border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-800">
+                      <CheckCircle2 size={16} />
+                      Delivered. Live tracking has ended.
+                    </p>
+                  )}
 
                   {/* Items Preview */}
                   <div className="p-5 sm:p-6 space-y-3">

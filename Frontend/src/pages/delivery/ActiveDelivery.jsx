@@ -172,14 +172,15 @@ export default function ActiveDelivery() {
       { enableHighAccuracy: true }
     );
 
-    socket.on("trackingStopped", () => {
+    const handleTrackingStopped = () => {
       navigator.geolocation.clearWatch(watchId);
-    });
+    };
+    socket.on("trackingStopped", handleTrackingStopped);
 
     return () => {
       navigator.geolocation.clearWatch(watchId);
-      socket.emit("stopTracking", order._id);
-      socket.off("trackingStopped");
+      socket.off("trackingStopped", handleTrackingStopped);
+      socket.emit("leaveOrderRoom", order._id);
     };
   }, [order, deliveryStep, fetchRoute]);
 
@@ -215,7 +216,6 @@ export default function ActiveDelivery() {
       );
 
       if (res.data.success) {
-        socket.emit("stopTracking", order._id);
         setDeliveryStep("delivered");
         toast.success("Order Delivered 🎉");
 

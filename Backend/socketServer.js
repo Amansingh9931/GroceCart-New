@@ -1,12 +1,27 @@
 import { Server } from "socket.io";
 
+let io;
+
+export const emitOrderStatusUpdate = (orderId, status) => {
+  if (!io) throw new Error("Socket server has not been initialized");
+  io.to(orderId.toString()).emit("orderStatusUpdate", {
+    orderId: orderId.toString(),
+    status,
+  });
+  if (status === "Delivered") {
+    io.to(orderId.toString()).emit("trackingStopped", {
+      orderId: orderId.toString(),
+    });
+  }
+};
+
 export const setupSocket = (server) => {
   const corsOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  const io = new Server(server, {
+  io = new Server(server, {
     cors: {
       origin: corsOrigins,
       methods: ["GET", "POST"],
@@ -22,37 +37,33 @@ export const setupSocket = (server) => {
       if (!orderId) return;
 
       socket.join(orderId);
-      socket.currentOrderRoom = orderId;
 
       console.log(`📦 Socket ${socket.id} joined room ${orderId}`);
     });
 
     // Receive delivery boy live GPS
-    socket.on("deliveryLocation", ({ orderId, lat, lng }) => {
-      if (!orderId || !lat || !lng) return;
+    socket.on("deliveryLocation", ({ orderId, lat, lng } = {}) => {
+      if (
+        !orderId ||
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng) ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
+      ) return;
 
-      io.to(orderId).emit("locationUpdate", { lat, lng });
+      io.to(orderId).emit("locationUpdate", { orderId, lat, lng });
     });
 
-    // Stop tracking (called when delivered)
-    socket.on("stopTracking", (orderId) => {
+    // Leave a tracking room without ending tracking for other clients.
+    socket.on("leaveOrderRoom", (orderId) => {
       if (!orderId) return;
-
-      io.to(orderId).emit("trackingStopped");
       socket.leave(orderId);
-
-      console.log(`🛑 Tracking stopped for order ${orderId}`);
     });
 
     // Cleanup on disconnect
     socket.on("disconnect", () => {
-      if (socket.currentOrderRoom) {
-        socket.leave(socket.currentOrderRoom);
-        console.log(
-          `❌ Socket ${socket.id} left room ${socket.currentOrderRoom}`
-        );
-      }
-
       console.log("🔌 Socket disconnected:", socket.id);
     });
   });
