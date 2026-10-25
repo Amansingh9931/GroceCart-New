@@ -17,6 +17,23 @@ const markerIcon = new L.Icon({
   iconAnchor: [12, 41],
 });
 
+const driverMarkerIcon = L.divIcon({
+  className: "",
+  html: '<div style="width:18px;height:18px;border:3px solid white;border-radius:50%;background:#16a34a;box-shadow:0 1px 5px #334155"></div>',
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+function getApproximateDistance(lat1, lng1, lat2, lng2) {
+  const radians = Math.PI / 180;
+  const deltaLat = (lat2 - lat1) * radians;
+  const deltaLng = (lng2 - lng1) * radians;
+  const a =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(lat1 * radians) * Math.cos(lat2 * radians) * Math.sin(deltaLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function MapViewport({ deliveryPos, destination }) {
   const map = useMap();
 
@@ -44,6 +61,7 @@ export default function ActiveDelivery() {
   const [route, setRoute] = useState([]);
   const [distance, setDistance] = useState("");
   const [eta, setEta] = useState("");
+  const [etaIsApproximate, setEtaIsApproximate] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [routeError, setRouteError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -79,17 +97,27 @@ export default function ActiveDelivery() {
     const userLat = order?.addressId?.mapDetails?.latitude;
     const userLng = order?.addressId?.mapDetails?.longitude;
     if (!Number.isFinite(Number(userLat)) || !Number.isFinite(Number(userLng))) return;
+
+    const destinationLat = Number(userLat);
+    const destinationLng = Number(userLng);
+    const showApproximateEta = (reason) => {
+      const distanceKm = getApproximateDistance(lat, lng, destinationLat, destinationLng);
+      const etaMinutes = Math.max(1, Math.ceil((distanceKm / 25) * 60));
+      setRoute([[lat, lng], [destinationLat, destinationLng]]);
+      setDistance(distanceKm.toFixed(2));
+      setEta(`~${etaMinutes} mins`);
+      setEtaIsApproximate(true);
+      setRouteError(reason);
+    };
+
     if (!GEO_KEY) {
-      setRoute([]);
-      setDistance("");
-      setEta("");
-      setRouteError("Routing is not configured. Set VITE_GEOAPIFY_KEY in Frontend/.env and restart the frontend.");
+      showApproximateEta("Road routing is not configured. Showing straight-line distance and approximate ETA.");
       return;
     }
 
     try {
       const res = await fetch(
-        `https://api.geoapify.com/v1/routing?waypoints=${lat},${lng}|${Number(userLat)},${Number(userLng)}&mode=drive&apiKey=${GEO_KEY}`
+        `https://api.geoapify.com/v1/routing?waypoints=${lat},${lng}|${destinationLat},${destinationLng}&mode=drive&apiKey=${GEO_KEY}`
       );
       if (res.status === 401 || res.status === 403) {
         throw new Error(`Geoapify rejected the API key (${res.status})`);
@@ -122,16 +150,14 @@ export default function ActiveDelivery() {
       setRoute(coords);
       setDistance((feature.properties.distance / 1000).toFixed(2));
       setEta(Math.round(feature.properties.time / 60) + " mins");
+      setEtaIsApproximate(false);
       setRouteError("");
     } catch (err) {
-      setRoute([]);
-      setDistance("");
-      setEta("");
       if (err.message.includes("rejected the API key")) {
-        setRouteError("Geoapify rejected the API key. Check that the key is active, has Routing API access, and allows this site's domain.");
+        showApproximateEta("Geoapify rejected the key. Showing straight-line distance and approximate ETA; verify the key and rebuild the frontend.");
       } else {
         console.error("Route error", err);
-        setRouteError("Unable to load the route. Check your network connection and Geoapify configuration, then try again.");
+        showApproximateEta("Road route unavailable. Showing straight-line distance and approximate ETA.");
       }
     }
   }, [order]);
@@ -278,7 +304,7 @@ export default function ActiveDelivery() {
             >
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <MapViewport deliveryPos={deliveryPos} destination={destination} />
-              {deliveryPos && <Marker position={deliveryPos} icon={markerIcon} />}
+              {deliveryPos && <Marker position={deliveryPos} icon={driverMarkerIcon} />}
               <Marker position={destination} icon={markerIcon} />
               {route.length > 0 && <Polyline positions={route} />}
             </MapContainer>
@@ -288,13 +314,18 @@ export default function ActiveDelivery() {
 
           {distance && eta && (
             <div className="flex justify-between mt-3 font-semibold">
-              <p>📏 Distance: {distance} km</p>
-              <p>⏱ ETA: {eta}</p>
+              <p>📏 {etaIsApproximate ? "Approx. distance" : "Distance"}: {distance} km</p>
+              <p>⏱ {etaIsApproximate ? "Approx. ETA" : "ETA"}: {eta}</p>
             </div>
           )}
           {deliveryStep === "out-for-delivery" && !deliveryPos && !locationError && (
             <p className="mt-3 text-center text-sm text-gray-500">
               Waiting for GPS location. Allow location access when prompted.
+            </p>
+          )}
+          {deliveryPos && (
+            <p className="mt-3 text-center text-sm text-green-700">
+              Your live location is being shared with the customer.
             </p>
           )}
           {locationError && (

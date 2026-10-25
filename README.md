@@ -107,15 +107,19 @@ Open the Vite URL shown in the frontend terminal, normally `http://localhost:517
 ## Run with Docker
 
 1. Create and configure `Backend/.env`. Docker Compose supplies the internal MongoDB and Redis connection values.
-2. Run:
+2. Build the frontend with its environment file and run:
 
    ```powershell
-   docker compose up --build
+   docker compose --env-file Frontend/.env up --build
    ```
 
 3. Open `http://localhost`.
 
-The Docker stack starts MongoDB, Redis, the Express/Socket.IO API, and an Nginx-served frontend. Nginx proxies `/api` and `/socket.io` to the backend. MongoDB and Redis data are persisted in named Docker volumes.
+The frontend's `VITE_GEOAPIFY_KEY` is injected at build time, so pass
+`Frontend/.env` with `--env-file` when building the Docker frontend. The Docker
+stack starts MongoDB, Redis, the Express/Socket.IO API, and an Nginx-served
+frontend. Nginx proxies `/api` and `/socket.io` to the backend. MongoDB and Redis
+data are persisted in named Docker volumes.
 
 Useful commands:
 

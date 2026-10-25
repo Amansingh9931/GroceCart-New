@@ -10,6 +10,8 @@ COPY . .
 # An empty value makes the browser use the same origin, which Nginx proxies.
 ARG VITE_BACKEND_URL=
 ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
+ARG VITE_GEOAPIFY_KEY=
+ENV VITE_GEOAPIFY_KEY=$VITE_GEOAPIFY_KEY
 RUN npm run build
 
 FROM nginx:1.27-alpine

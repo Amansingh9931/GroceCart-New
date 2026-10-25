@@ -44,6 +44,7 @@ services:
       context: ./Frontend
       args:
         VITE_BACKEND_URL: ""
+        VITE_GEOAPIFY_KEY: ${VITE_GEOAPIFY_KEY:-}
     restart: unless-stopped
     depends_on:
       - backend
