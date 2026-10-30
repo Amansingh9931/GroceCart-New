@@ -65,6 +65,8 @@ Update the placeholder values before running the app.
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Initial admin credentials |
 | `CLOUDINARY_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Cloudinary credentials |
 | `CORS_ORIGIN` | Comma-separated allowed client origins |
+| `OPENAI_API_KEY` | Optional server-only key that enables LLM-powered shopping conversations |
+| `OPENAI_MODEL` | Optional OpenAI chat model name (defaults to `gpt-4.1-mini`) |
 
 ### Frontend variables
 
@@ -77,6 +79,16 @@ Update the placeholder values before running the app.
 The Geoapify key must be active and have Routing API access enabled. If using
 domain restrictions, allow the frontend's development and production origins.
 Restart the frontend dev server or rebuild after changing this variable.
+
+## Shopping assistant
+
+The floating **Ask GroceCart** button is available throughout the shopper
+experience. It reads the current catalogue on the server, suggests only
+in-stock products, and lets the customer add a recommendation to their cart.
+
+Set `OPENAI_API_KEY` in `Backend/.env` to enable LLM replies. The key is never
+sent to the browser. Without a key, the same UI remains available and returns
+fast catalogue-matching suggestions, which is useful for local development.
 
 ## Run locally
 

@@ -12,6 +12,7 @@ import UserProductRouter from "./Route/user/UserProductRoute.js";
 import orderRouter from "./Route/user/OrderRoute.js";
 import addressRouter from "./Route/user/AddressRoute.js";
 import deliveryRouter from "./Route/delivery/DeliveryRoute.js";
+import shoppingAssistantRouter from "./Route/user/ShoppingAssistantRoute.js";
 import { initializeCache } from "./Services/cacheService.js";
 
 const app = express();
@@ -45,6 +46,7 @@ app.use("/api/products", UserProductRouter);
 app.use("/api/order", orderRouter);
 app.use("/api/address", addressRouter);
 app.use("/api/delivery", deliveryRouter);
+app.use("/api/assistant", shoppingAssistantRouter);
 
 
 //test route

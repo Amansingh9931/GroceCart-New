@@ -6,6 +6,7 @@ import Navbar from "./pages/common/Navbar.jsx";
 import CartDrawer from "./pages/common/CartDrawer.jsx";
 import Footer from "./pages/common/Footer.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ShoppingAssistant from "./components/ShoppingAssistant.jsx";
 
 const Login = lazy(() => import("./pages/Login.jsx"));
 const Signup = lazy(() => import("./pages/Signup.jsx"));
@@ -143,6 +144,7 @@ function App() {
       </Routes>
       </Suspense>
       {isShopperPage && <Footer />}
+      {isShopperPage && <ShoppingAssistant />}
     </>
   );
 }
